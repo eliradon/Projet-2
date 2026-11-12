@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Onglet Historique</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+a{color:#1F6F8B}a:hover{color:#14506A}
+</style>
+</head>
+<body>
+<!-- Maquette statique de référence pour l'interface CustomTkinter. Ne fait pas partie de l'application. -->
+<div style="max-width: 1280px; margin: 0 auto; box-sizing: border-box; padding: 24px; background: #F3F4F7; font-family: Inter, system-ui, sans-serif; color: #1D2030; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<h1 style="margin: 0; font-size: 22px; font-weight: 700">Prédicteur de PV — Pokémon</h1>
+<nav aria-label="Onglets" style="display: flex; gap: 4px; padding: 4px; background: #E2E4EA; border-radius: 10px">
+<a href="Main.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 20px; box-sizing: border-box; border-radius: 8px; color: #4A5060; font-size: 15px; font-weight: 500; text-decoration: none">Prédiction</a>
+<a href="Historique.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 20px; box-sizing: border-box; border-radius: 8px; background: #FFFFFF; color: #1D2030; font-size: 15px; font-weight: 600; text-decoration: none">Historique</a>
+</nav>
+</div>
+
+<section style="box-sizing: border-box; background: #FFFFFF; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-size: 18px; font-weight: 600">Prédictions enregistrées</h2>
+<p style="margin: 0; font-size: 14px; color: #4A5060">4 prédictions · les plus récentes en premier · fichier historique.csv</p>
+</div>
+<button type="button" style="min-height: 44px; padding: 0 20px; border: 1px solid #8A8F9C; border-radius: 10px; background: #FFFFFF; color: #1D2030; font: 500 15px Inter, system-ui, sans-serif; cursor: pointer">Actualiser</button>
+</div>
+
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 900px; border-collapse: collapse; font-size: 15px">
+<thead>
+<tr style="background: #F3F4F7; text-align: right; color: #4A5060; font-size: 13px">
+<th scope="col" style="padding: 12px; text-align: left; font-weight: 600">Date et heure</th>
+<th scope="col" style="padding: 12px; font-weight: 600">Attaque</th>
+<th scope="col" style="padding: 12px; font-weight: 600">Défense</th>
+<th scope="col" style="padding: 12px; font-weight: 600">Att. Spé.</th>
+<th scope="col" style="padding: 12px; font-weight: 600">Déf. Spé.</th>
+<th scope="col" style="padding: 12px; font-weight: 600">Vitesse</th>
+<th scope="col" style="padding: 12px; text-align: left; font-weight: 600">Type 1</th>
+<th scope="col" style="padding: 12px; text-align: left; font-weight: 600">Type 2</th>
+<th scope="col" style="padding: 12px; text-align: left; font-weight: 600">Légendaire</th>
+<th scope="col" style="padding: 12px; font-weight: 700; color: #14506A">PV prédits</th>
+</tr>
+</thead>
+<tbody style="text-align: right">
+<tr style="border-bottom: 1px solid #E6E8EE; background: #F0F8FB">
+<td style="padding: 14px 12px; text-align: left">2026-11-12 18:04</td>
+<td style="padding: 14px 12px">50</td>
+<td style="padding: 14px 12px">110</td>
+<td style="padding: 14px 12px">130</td>
+<td style="padding: 14px 12px">130</td>
+<td style="padding: 14px 12px">90</td>
+<td style="padding: 14px 12px; text-align: left">Feu</td>
+<td style="padding: 14px 12px; text-align: left">Vol</td>
+<td style="padding: 14px 12px; text-align: left">Non</td>
+<td style="padding: 14px 12px; font-weight: 700; color: #14506A">90</td>
+</tr>
+<tr style="border-bottom: 1px solid #E6E8EE">
+<td style="padding: 14px 12px; text-align: left">2026-11-12 17:58</td>
+<td style="padding: 14px 12px">50</td>
+<td style="padding: 14px 12px">110</td>
+<td style="padding: 14px 12px">130</td>
+<td style="padding: 14px 12px">130</td>
+<td style="padding: 14px 12px">90</td>
+<td style="padding: 14px 12px; text-align: left">Feu</td>
+<td style="padding: 14px 12px; text-align: left">Vol</td>
+<td style="padding: 14px 12px; text-align: left">Oui</td>
+<td style="padding: 14px 12px; font-weight: 700; color: #14506A">[PV]</td>
+</tr>
+<tr style="border-bottom: 1px solid #E6E8EE">
+<td style="padding: 14px 12px; text-align: left">2026-11-12 17:51</td>
+<td style="padding: 14px 12px">85</td>
+<td style="padding: 14px 12px">60</td>
+<td style="padding: 14px 12px">45</td>
+<td style="padding: 14px 12px">70</td>
+<td style="padding: 14px 12px">100</td>
+<td style="padding: 14px 12px; text-align: left">Eau</td>
+<td style="padding: 14px 12px; text-align: left">Aucun</td>
+<td style="padding: 14px 12px; text-align: left">Non</td>
+<td style="padding: 14px 12px; font-weight: 700; color: #14506A">[PV]</td>
+</tr>
+<tr style="border-bottom: 1px solid #E6E8EE">
+<td style="padding: 14px 12px; text-align: left">2026-11-11 21:30</td>
+<td style="padding: 14px 12px">120</td>
+<td style="padding: 14px 12px">95</td>
+<td style="padding: 14px 12px">40</td>
+<td style="padding: 14px 12px">55</td>
+<td style="padding: 14px 12px">35</td>
+<td style="padding: 14px 12px; text-align: left">Roche</td>
+<td style="padding: 14px 12px; text-align: left">Sol</td>
+<td style="padding: 14px 12px; text-align: left">Non</td>
+<td style="padding: 14px 12px; font-weight: 700; color: #14506A">[PV]</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p style="margin: 0; font-size: 14px; color: #4A5060">Si le fichier est absent ou vide, le tableau est remplacé par : « Aucune prédiction pour l'instant. »</p>
+
+</section>
+</div>
+</body>
+</html>

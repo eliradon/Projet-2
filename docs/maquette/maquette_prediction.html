@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Onglet Prédiction</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+a{color:#1F6F8B}a:hover{color:#14506A}
+</style>
+</head>
+<body>
+<!-- Maquette statique de référence pour l'interface CustomTkinter. Ne fait pas partie de l'application. -->
+<div style="max-width: 1280px; margin: 0 auto; box-sizing: border-box; padding: 24px; background: #F3F4F7; font-family: Inter, system-ui, sans-serif; color: #1D2030; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<h1 style="margin: 0; font-size: 22px; font-weight: 700">Prédicteur de PV - Pokémon</h1>
+<nav aria-label="Onglets" style="display: flex; gap: 4px; padding: 4px; background: #E2E4EA; border-radius: 10px">
+<a href="Main.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 20px; box-sizing: border-box; border-radius: 8px; background: #FFFFFF; color: #1D2030; font-size: 15px; font-weight: 600; text-decoration: none">Prédiction</a>
+<a href="Historique.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 20px; box-sizing: border-box; border-radius: 8px; color: #4A5060; font-size: 15px; font-weight: 500; text-decoration: none">Historique</a>
+</nav>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+<section aria-label="Saisie des caractéristiques" style="flex: 1 1 520px; min-width: 0; box-sizing: border-box; background: #FFFFFF; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; align-items: center; gap: 20px">
+<span id="lbl-legendaire" style="font-size: 26px; font-weight: 700">Légendaire ?</span>
+<button type="button" aria-pressed="false" aria-labelledby="lbl-legendaire" style="position: relative; width: 84px; height: 44px; border: 0; border-radius: 22px; background: #C4C6CC; padding: 0; cursor: pointer">
+<span aria-hidden="true" style="position: absolute; left: 4px; top: 4px; width: 36px; height: 36px; border-radius: 50%; background: #FFFFFF"></span>
+</button>
+<span style="font-size: 15px; color: #4A5060">Non</span>
+</div>
+
+<div style="display: flex; flex-direction: column">
+
+<div style="display: grid; grid-template-columns: 96px 76px minmax(0, 1fr); gap: 16px; align-items: center; min-height: 60px; border-top: 1px solid #E6E8EE; border-bottom: 1px solid #E6E8EE; background: #F0F8FB; margin: 0 -12px; padding: 0 12px">
+<span style="text-align: right; font-size: 17px; font-weight: 700; color: #14506A">PV</span>
+<span style="text-align: center; font-size: 30px; font-weight: 700; color: #14506A">90</span>
+<div aria-hidden="true" style="height: 18px; border-radius: 9px; background: #E6E8EE; overflow: hidden">
+<div style="width: 45%; height: 18px; background: #A0E515"></div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 96px 76px minmax(0, 1fr); gap: 16px; align-items: center; min-height: 60px; border-bottom: 1px solid #E6E8EE">
+<label for="attaque" style="text-align: right; font-size: 17px; color: #4A5060">Attaque</label>
+<input id="attaque" type="text" inputmode="numeric" value="50" style="width: 76px; height: 44px; box-sizing: border-box; border: 1px solid #C4C6CC; border-radius: 8px; text-align: center; font: 600 24px Inter, system-ui, sans-serif; color: #1D2030; background: #FFFFFF">
+<div aria-hidden="true" style="position: relative; height: 18px; border-radius: 9px; background: #E6E8EE">
+<div style="width: 25%; height: 18px; border-radius: 9px; background: #FF7F0F"></div>
+<div style="position: absolute; left: calc(25% - 13px); top: -4px; width: 26px; height: 26px; box-sizing: border-box; border-radius: 50%; background: #FFFFFF; border: 1px solid #8A8F9C"></div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 96px 76px minmax(0, 1fr); gap: 16px; align-items: center; min-height: 60px; border-bottom: 1px solid #E6E8EE">
+<label for="defense" style="text-align: right; font-size: 17px; color: #4A5060">Défense</label>
+<input id="defense" type="text" inputmode="numeric" value="110" style="width: 76px; height: 44px; box-sizing: border-box; border: 1px solid #C4C6CC; border-radius: 8px; text-align: center; font: 600 24px Inter, system-ui, sans-serif; color: #1D2030; background: #FFFFFF">
+<div aria-hidden="true" style="position: relative; height: 18px; border-radius: 9px; background: #E6E8EE">
+<div style="width: 55%; height: 18px; border-radius: 9px; background: #A0E515"></div>
+<div style="position: absolute; left: calc(55% - 13px); top: -4px; width: 26px; height: 26px; box-sizing: border-box; border-radius: 50%; background: #FFFFFF; border: 1px solid #8A8F9C"></div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 96px 76px minmax(0, 1fr); gap: 16px; align-items: center; min-height: 60px; border-bottom: 1px solid #E6E8EE">
+<label for="attspe" style="text-align: right; font-size: 17px; color: #4A5060">Att. Spé.</label>
+<input id="attspe" type="text" inputmode="numeric" value="130" style="width: 76px; height: 44px; box-sizing: border-box; border: 1px solid #C4C6CC; border-radius: 8px; text-align: center; font: 600 24px Inter, system-ui, sans-serif; color: #1D2030; background: #FFFFFF">
+<div aria-hidden="true" style="position: relative; height: 18px; border-radius: 9px; background: #E6E8EE">
+<div style="width: 65%; height: 18px; border-radius: 9px; background: #23CD5E"></div>
+<div style="position: absolute; left: calc(65% - 13px); top: -4px; width: 26px; height: 26px; box-sizing: border-box; border-radius: 50%; background: #FFFFFF; border: 1px solid #8A8F9C"></div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 96px 76px minmax(0, 1fr); gap: 16px; align-items: center; min-height: 60px; border-bottom: 1px solid #E6E8EE">
+<label for="defspe" style="text-align: right; font-size: 17px; color: #4A5060">Déf. Spé.</label>
+<input id="defspe" type="text" inputmode="numeric" value="130" style="width: 76px; height: 44px; box-sizing: border-box; border: 1px solid #C4C6CC; border-radius: 8px; text-align: center; font: 600 24px Inter, system-ui, sans-serif; color: #1D2030; background: #FFFFFF">
+<div aria-hidden="true" style="position: relative; height: 18px; border-radius: 9px; background: #E6E8EE">
+<div style="width: 65%; height: 18px; border-radius: 9px; background: #23CD5E"></div>
+<div style="position: absolute; left: calc(65% - 13px); top: -4px; width: 26px; height: 26px; box-sizing: border-box; border-radius: 50%; background: #FFFFFF; border: 1px solid #8A8F9C"></div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 96px 76px minmax(0, 1fr); gap: 16px; align-items: center; min-height: 60px; border-bottom: 1px solid #E6E8EE">
+<label for="vitesse" style="text-align: right; font-size: 17px; color: #4A5060">Vitesse</label>
+<input id="vitesse" type="text" inputmode="numeric" value="90" style="width: 76px; height: 44px; box-sizing: border-box; border: 1px solid #C4C6CC; border-radius: 8px; text-align: center; font: 600 24px Inter, system-ui, sans-serif; color: #1D2030; background: #FFFFFF">
+<div aria-hidden="true" style="position: relative; height: 18px; border-radius: 9px; background: #E6E8EE">
+<div style="width: 45%; height: 18px; border-radius: 9px; background: #A0E515"></div>
+<div style="position: absolute; left: calc(45% - 13px); top: -4px; width: 26px; height: 26px; box-sizing: border-box; border-radius: 50%; background: #FFFFFF; border: 1px solid #8A8F9C"></div>
+</div>
+</div>
+
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span id="lbl-type1" style="font-size: 13px; color: #4A5060">Type 1</span>
+<button type="button" aria-labelledby="lbl-type1" style="display: flex; align-items: center; width: 190px; height: 44px; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: #3A3D56; color: #FFFFFF; font: 700 15px Inter, system-ui, sans-serif; letter-spacing: 0.04em; cursor: pointer">
+<span aria-hidden="true" style="width: 44px; height: 44px; background: #E62829"></span>
+<span style="flex-grow: 1; text-align: center">FEU</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#FFFFFF" stroke-width="2" style="margin-right: 12px"><path d="M3 6l5 5 5-5"></path></svg>
+</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span id="lbl-type2" style="font-size: 13px; color: #4A5060">Type 2 (optionnel)</span>
+<button type="button" aria-labelledby="lbl-type2" style="display: flex; align-items: center; width: 190px; height: 44px; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: #3A3D56; color: #FFFFFF; font: 700 15px Inter, system-ui, sans-serif; letter-spacing: 0.04em; cursor: pointer">
+<span aria-hidden="true" style="width: 44px; height: 44px; background: #81B9EF"></span>
+<span style="flex-grow: 1; text-align: center">VOL</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#FFFFFF" stroke-width="2" style="margin-right: 12px"><path d="M3 6l5 5 5-5"></path></svg>
+</button>
+</div>
+</div>
+
+<p style="margin: 0; min-height: 20px; font-size: 14px; color: #B3261E">Zone des messages d'erreur — exemple : « Attaque : "abc" n'est pas un nombre. »</p>
+
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<button type="button" style="min-height: 48px; padding: 0 32px; border: 0; border-radius: 10px; background: #1F6F8B; color: #FFFFFF; font: 600 17px Inter, system-ui, sans-serif; cursor: pointer">Prédire</button>
+<button type="button" style="min-height: 48px; padding: 0 24px; border: 1px solid #8A8F9C; border-radius: 10px; background: #FFFFFF; color: #1D2030; font: 500 17px Inter, system-ui, sans-serif; cursor: pointer">Réinitialiser</button>
+</div>
+
+<div style="border-radius: 10px; background: #F0F8FB; padding: 16px 20px; display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0; font-size: 20px; font-weight: 600">Ce Pokémon aurait environ 90 PV.</p>
+<p style="margin: 0; font-size: 14px; color: #4A5060">Erreur moyenne du modèle : ± 15 PV</p>
+</div>
+
+</section>
+
+<div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+<section style="box-sizing: border-box; background: #FFFFFF; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">Profil du Pokémon</h2>
+<svg role="img" aria-label="Radar à six axes : PV, Attaque, Défense, Vitesse, Déf. Spé., Att. Spé." viewBox="-50 10 400 290" style="width: 100%; max-height: 320px; font-family: Inter, system-ui, sans-serif">
+<polygon points="150,40 245.3,95 245.3,205 150,260 54.7,205 54.7,95" fill="none" stroke="#B9BDC8" stroke-width="1"></polygon>
+<polygon points="150,76.7 213.5,113.3 213.5,186.7 150,223.3 86.5,186.7 86.5,113.3" fill="none" stroke="#D5D8E0" stroke-width="1"></polygon>
+<polygon points="150,113.3 181.8,131.7 181.8,168.3 150,186.7 118.2,168.3 118.2,131.7" fill="none" stroke="#D5D8E0" stroke-width="1"></polygon>
+<path d="M150 150L150 40M150 150L245.3 95M150 150L245.3 205M150 150L150 260M150 150L54.7 205M150 150L54.7 95" stroke="#D5D8E0" stroke-width="1"></path>
+<polygon points="150,88.1 179.8,132.8 215.5,187.8 150,211.9 72.6,194.7 72.6,105.3" fill="#2E9DB8" fill-opacity="0.35" stroke="#14506A" stroke-width="2.5" stroke-linejoin="round"></polygon>
+<circle cx="150" cy="88.1" r="5" fill="#D9480F"></circle>
+<text x="150" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#1D2030">PV</text>
+<text x="253" y="92" text-anchor="start" font-size="14" font-weight="600" fill="#1D2030">Attaque</text>
+<text x="253" y="214" text-anchor="start" font-size="14" font-weight="600" fill="#1D2030">Défense</text>
+<text x="150" y="280" text-anchor="middle" font-size="14" font-weight="600" fill="#1D2030">Vitesse</text>
+<text x="47" y="214" text-anchor="end" font-size="14" font-weight="600" fill="#1D2030">Déf. Spé.</text>
+<text x="47" y="92" text-anchor="end" font-size="14" font-weight="600" fill="#1D2030">Att. Spé.</text>
+</svg>
+<div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #4A5060">
+<span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 14px; height: 14px; background: #2E9DB8; opacity: 0.6; border: 2px solid #14506A; box-sizing: border-box"></span>Saisie</span>
+<span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 50%; background: #D9480F"></span>PV prédits</span>
+</div>
+</section>
+
+<section style="box-sizing: border-box; background: #FFFFFF; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600">Où se situe la prédiction ?</h2>
+<svg role="img" aria-label="Histogramme des PV du jeu de données avec une ligne verticale à la valeur prédite" viewBox="0 0 420 210" style="width: 100%; font-family: Inter, system-ui, sans-serif">
+<rect x="150" y="16" width="42" height="144" fill="#D9480F" fill-opacity="0.12"></rect>
+<g fill="#9CC9D8">
+<rect x="45" y="157" width="26" height="3"></rect>
+<rect x="73" y="141" width="26" height="19"></rect>
+<rect x="101" y="80" width="26" height="80"></rect>
+<rect x="129" y="20" width="26" height="140"></rect>
+<rect x="157" y="33" width="26" height="127"></rect>
+<rect x="185" y="73" width="26" height="87"></rect>
+<rect x="213" y="113" width="26" height="47"></rect>
+<rect x="241" y="141" width="26" height="19"></rect>
+<rect x="269" y="153" width="26" height="7"></rect>
+<rect x="297" y="157" width="26" height="3"></rect>
+<rect x="325" y="158" width="26" height="2"></rect>
+<rect x="353" y="158" width="26" height="2"></rect>
+<rect x="381" y="159" width="26" height="1"></rect>
+</g>
+<path d="M44 16V160H410" fill="none" stroke="#4A5060" stroke-width="1"></path>
+<path d="M170.7 12V160" stroke="#D9480F" stroke-width="2.5"></path>
+<g font-size="11" fill="#4A5060" text-anchor="middle">
+<text x="44" y="175">0</text>
+<text x="114.4" y="175">50</text>
+<text x="184.8" y="175">100</text>
+<text x="255.2" y="175">150</text>
+<text x="325.5" y="175">200</text>
+<text x="395.9" y="175">250</text>
+<text x="227" y="198" font-size="12">PV</text>
+<text x="14" y="88" font-size="12" transform="rotate(-90 14 88)">Nombre de Pokémon</text>
+</g>
+</svg>
+<div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #4A5060">
+<span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 14px; height: 14px; background: #9CC9D8"></span>Jeu de données</span>
+<span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 3px; height: 14px; background: #D9480F"></span>PV prédits (90)</span>
+<span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 14px; height: 14px; background: #F6DDD2"></span>± erreur moyenne</span>
+</div>
+<p style="margin: 0; font-size: 12px; color: #4A5060">Barres illustratives : les vraies valeurs viennent des métadonnées du modèle.</p>
+</section>
+
+</div>
+</div>
+</div>
+</body>
+</html>

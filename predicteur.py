@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 csv_path = Path(__file__).with_name('Pokemon.csv')
 data = pd.read_csv(csv_path)
 
-X = data[["Attack", "Speed", "Defense","Sp. Atk","Sp. Def", "Legendary" ,"Type 1", "Type 2"]]
+X = data[["Attack", "Speed", "Defense","Sp. Atk","Sp. Def", "Legendary" ,"Type 1", "Type 2"]].copy()
 y = data["HP"]
 
 types = list(set(X["Type 1"].unique()).union(set(X["Type 2"].unique())))
@@ -32,8 +32,8 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 model = LinearRegression()
 
-r2_scores = cross_val_score(model, X, y, cv=5, scoring="r2")
-mae_scores = -cross_val_score(model, X, y, cv=5, scoring="neg_mean_absolute_error")
+r2_scores = cross_val_score(model, X, y, cv=20, scoring="r2")
+mae_scores = -cross_val_score(model, X, y, cv=20, scoring="neg_mean_absolute_error")
 
 print("R² par pli :", r2_scores)
 print("R² moyen :", r2_scores.mean(), "+/-", r2_scores.std())

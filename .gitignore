@@ -10,3 +10,6 @@ htmlcov/
 
 # Fichier système de macOS.
 .DS_Store
+
+# Réglages personnels de VS Code.
+.vscode/

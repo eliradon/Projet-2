@@ -6,9 +6,10 @@ modele.py et historique.py.
 """
 
 import math
+import os
 import tkinter
 from collections.abc import Callable
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 import customtkinter as ctk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -17,7 +18,7 @@ from PIL import Image
 
 import apparence
 from exceptions import DonneeInvalideError, HistoriqueInaccessibleError
-from historique import Historique
+from historique import COLONNE_DATE, Historique
 from modele import Modele, arrondir_pv
 from variables import (AUCUN_TYPE, Variable, VariableCategorielle,
                        VariableNumerique, creer_variable,
@@ -28,6 +29,8 @@ ONGLET_PREDICTION = "Prédiction"
 ONGLET_HISTORIQUE = "Historique"
 MARGE = 20
 TEXTE_PV_VIDE = "—"
+MESSAGE_PERIME = "Cliquez sur Prédire pour mettre à jour"
+MESSAGE_HISTORIQUE_VIDE = "Aucune prédiction pour l'instant."
 # Axes du radar après les PV, dans le sens des aiguilles d'une montre.
 ORDRE_RADAR = ["Attack", "Defense", "Speed", "Sp. Def", "Sp. Atk"]
 
@@ -171,10 +174,16 @@ class LigneResultat(ctk.CTkFrame):
 
     def afficher(self, pv: int) -> None:
         """Reçoit les PV prédits ; affiche le nombre et remplit la barre."""
-        self._valeur.configure(text=str(pv))
+        self._valeur.configure(text=str(pv),
+                               text_color=apparence.COULEUR_ACCENT)
         # La barre attend une proportion entre 0 (vide) et 1 (pleine).
         self._barre.set(min(1.0, pv / self._maximum))
         self._barre.configure(progress_color=apparence.couleur_pour_valeur(pv))
+
+    def griser(self) -> None:
+        """Grise la valeur et la barre : la prédiction n'est plus à jour."""
+        self._valeur.configure(text_color=apparence.COULEUR_BORDURE)
+        self._barre.configure(progress_color=apparence.COULEUR_BORDURE)
 
     def vider(self) -> None:
         """Revient à l'état initial : « — » et barre vide."""
@@ -344,6 +353,97 @@ class PanneauDistribution:
         self._canevas.draw_idle()
 
 
+class OngletHistorique(ctk.CTkFrame):
+    """Le tableau des prédictions enregistrées, les plus récentes en premier."""
+
+    def __init__(self, parent, historique: Historique, entetes: dict[str, str],
+                 colonnes_numeriques: list[str]) -> None:
+        """Reçoit le widget parent, l'historique à afficher, les en-têtes
+        {colonne du CSV: libellé affiché} et les colonnes à aligner à droite."""
+        super().__init__(parent, fg_color=apparence.COULEUR_CARTE,
+                         corner_radius=14)
+        self._historique = historique
+        self._colonnes = list(entetes)
+
+        haut = ctk.CTkFrame(self, fg_color="transparent")
+        haut.pack(fill="x", padx=28, pady=(28, 16))
+        bouton = ctk.CTkButton(
+            haut, text="Actualiser", height=44, width=120, corner_radius=10,
+            border_width=1, fg_color=apparence.COULEUR_CARTE,
+            hover_color=apparence.COULEUR_FOND,
+            border_color=apparence.COULEUR_TEXTE_SECONDAIRE,
+            text_color=apparence.COULEUR_TEXTE, font=ctk.CTkFont(size=15),
+            command=self.actualiser)
+        bouton.pack(side="right")
+        titre = ctk.CTkLabel(haut, text="Prédictions enregistrées", anchor="w",
+                             text_color=apparence.COULEUR_TEXTE,
+                             font=ctk.CTkFont(size=18, weight="bold"))
+        titre.pack(fill="x")
+        self._sous_titre = ctk.CTkLabel(
+            haut, text="", anchor="w", font=ctk.CTkFont(size=14),
+            text_color=apparence.COULEUR_TEXTE_SECONDAIRE)
+        self._sous_titre.pack(fill="x")
+
+        # Message affiché à la place du tableau (historique vide ou illisible).
+        self._message = ctk.CTkLabel(
+            self, text="", anchor="w", font=ctk.CTkFont(size=15),
+            text_color=apparence.COULEUR_TEXTE_SECONDAIRE)
+
+        self._appliquer_style()
+        self._tableau = ttk.Treeview(self, columns=self._colonnes,
+                                     show="headings", selectmode="none")
+        for colonne, libelle in entetes.items():
+            alignement = "e" if colonne in colonnes_numeriques else "w"
+            self._tableau.heading(colonne, text=libelle, anchor=alignement)
+            self._tableau.column(colonne, anchor=alignement, width=100)
+        self._tableau.column(COLONNE_DATE, width=170)
+        self.actualiser()
+
+    def _appliquer_style(self) -> None:
+        """Règle les couleurs et les tailles du tableau (widget ttk)."""
+        style = ttk.Style()
+        style.theme_use("default")  # le thème de macOS ignore les couleurs
+        style.configure("Treeview", rowheight=44, font=("", 15), borderwidth=0,
+                        background=apparence.COULEUR_CARTE,
+                        fieldbackground=apparence.COULEUR_CARTE,
+                        foreground=apparence.COULEUR_TEXTE)
+        style.configure("Treeview.Heading", font=("", 13, "bold"),
+                        relief="flat", padding=8,
+                        background=apparence.COULEUR_FOND,
+                        foreground=apparence.COULEUR_TEXTE_SECONDAIRE)
+
+    def actualiser(self) -> None:
+        """Relit l'historique et remplit le tableau. N'échoue pas : si le
+        fichier est illisible, le message d'erreur remplace le tableau."""
+        try:
+            lignes = self._historique.lire()
+        except HistoriqueInaccessibleError as erreur:
+            self._afficher_message(str(erreur))
+            return
+        if len(lignes) == 0:
+            self._afficher_message(MESSAGE_HISTORIQUE_VIDE)
+            return
+
+        self._tableau.delete(*self._tableau.get_children())
+        for ligne in lignes:
+            cases = [apparence.formater_cellule(ligne[colonne])
+                     for colonne in self._colonnes]
+            self._tableau.insert("", "end", values=cases)
+        pluriel = "s" if len(lignes) > 1 else ""
+        self._sous_titre.configure(
+            text=f"{len(lignes)} prédiction{pluriel} · les plus récentes en "
+                 f"premier · fichier {os.path.basename(self._historique.chemin)}")
+        self._message.pack_forget()
+        self._tableau.pack(fill="both", expand=True, padx=28, pady=(0, 28))
+
+    def _afficher_message(self, texte: str) -> None:
+        """Reçoit un texte et l'affiche à la place du tableau."""
+        self._sous_titre.configure(text="")
+        self._tableau.pack_forget()
+        self._message.configure(text=texte)
+        self._message.pack(fill="x", padx=28, pady=(0, 28))
+
+
 class Application(ctk.CTk):
     """Fenêtre principale. Elle CONTIENT (composition) le modèle, la liste
     des variables et l'historique, ainsi que les panneaux de l'écran."""
@@ -364,6 +464,9 @@ class Application(ctk.CTk):
         colonnes = [variable.nom for variable in self._variables]
         self._historique = Historique(colonnes + [metadonnees["cible"]["nom"]])
 
+        # True quand des PV prédits sont affichés à l'écran.
+        self._prediction_affichee = False
+
         self.title(TITRE)
         self.geometry("1280x860")
         # En dessous de cette taille, le bas de la carte de saisie serait coupé.
@@ -381,7 +484,8 @@ class Application(ctk.CTk):
             segmented_button_unselected_color=apparence.COULEUR_FOND_ONGLETS,
             segmented_button_unselected_hover_color=apparence.COULEUR_SEPARATEUR,
             segmented_button_font=ctk.CTkFont(size=15),
-            text_color=apparence.COULEUR_TEXTE)
+            text_color=apparence.COULEUR_TEXTE,
+            command=self._sur_onglet)
         self._onglets.pack(fill="both", expand=True, padx=MARGE, pady=(8, MARGE))
         self._onglets.add(ONGLET_PREDICTION)
         self._onglets.add(ONGLET_HISTORIQUE)
@@ -557,9 +661,9 @@ class Application(ctk.CTk):
         valeurs, erreurs = self._valider_saisies(self._lire_saisies())
         if erreurs:
             # État « Saisie invalide » : une erreur par ligne, PV inchangés.
-            self._message.configure(text="\n".join(erreurs))
+            self._afficher_message("\n".join(erreurs))
             return
-        self._message.configure(text="")
+        self._afficher_message("")
 
         metadonnees = self._modele.metadonnees
         pv = arrondir_pv(self._modele.predire(valeurs),
@@ -571,11 +675,13 @@ class Application(ctk.CTk):
             self._historique.ajouter(valeurs)
         except HistoriqueInaccessibleError as erreur:
             # La prédiction reste affichée ; on signale seulement le problème.
-            self._message.configure(text=str(erreur))
+            self._afficher_message(str(erreur))
+        self._onglet_historique.actualiser()
 
     def _afficher_resultat(self, pv: int) -> None:
         """Reçoit les PV prédits ; met à jour la ligne PV et la phrase."""
         erreur_moyenne = round(self._modele.metadonnees["metrique"]["valeur"])
+        self._prediction_affichee = True
         self._ligne_pv.afficher(pv)
         self._tracer_radar(pv)
         self._distribution.tracer(pv)
@@ -596,7 +702,8 @@ class Application(ctk.CTk):
         self._ligne_pv.vider()
         self._tracer_radar(None)
         self._distribution.tracer(None)
-        self._message.configure(text="")
+        self._prediction_affichee = False
+        self._afficher_message("")
         self._encadre_resultat.pack_forget()
 
     def _construire_interrupteur(self, zone: ctk.CTkFrame,
@@ -627,10 +734,36 @@ class Application(ctk.CTk):
 
     def _sur_changement(self) -> None:
         """Appelée quand une saisie change (curseur, champ, type, interrupteur).
-        Redessine le radar, sans le sommet PV qui n'est plus à jour."""
+        Redessine le radar, sans le sommet PV qui n'est plus à jour. S'il y
+        avait une prédiction à l'écran, elle passe à l'état « périmé »."""
         self._tracer_radar(None)
+        if self._prediction_affichee:
+            self._ligne_pv.griser()
+            self._afficher_message(MESSAGE_PERIME,
+                                   apparence.COULEUR_TEXTE_SECONDAIRE)
+
+    def _afficher_message(self, texte: str,
+                          couleur: str = apparence.COULEUR_ERREUR) -> None:
+        """Reçoit un texte (et sa couleur, rouge par défaut) et l'affiche
+        dans la zone des messages. Un texte vide efface la zone."""
+        self._message.configure(text=texte, text_color=couleur)
+
+    def _sur_onglet(self) -> None:
+        """Appelée quand on change d'onglet : relit l'historique à son ouverture."""
+        if self._onglets.get() == ONGLET_HISTORIQUE:
+            self._onglet_historique.actualiser()
 
     def _construire_onglet_historique(self, onglet: ctk.CTkFrame) -> None:
-        """Reçoit le cadre de l'onglet Historique et y place sa carte."""
-        self._carte_historique = creer_carte(onglet, "Prédictions enregistrées")
-        self._carte_historique.pack(fill="both", expand=True)
+        """Reçoit le cadre de l'onglet Historique et y place le tableau,
+        avec une colonne par variable des métadonnées."""
+        cible = self._modele.metadonnees["cible"]
+        entetes = {COLONNE_DATE: "Date et heure"}
+        colonnes_numeriques = [cible["nom"]]
+        for variable in self._variables:
+            entetes[variable.nom] = variable.libelle
+            if isinstance(variable, VariableNumerique):
+                colonnes_numeriques.append(variable.nom)
+        entetes[cible["nom"]] = cible["libelle"] + " prédits"
+        self._onglet_historique = OngletHistorique(
+            onglet, self._historique, entetes, colonnes_numeriques)
+        self._onglet_historique.pack(fill="both", expand=True)

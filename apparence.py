@@ -117,3 +117,23 @@ def chemin_image_type(type_anglais: str,
     if os.path.exists(chemin):
         return chemin
     return None
+
+
+def formater_cellule(texte: str) -> str:
+    """Reçoit le texte d'une case de l'historique (tel qu'écrit dans le CSV)
+    et renvoie le texte à afficher : « True » devient « Oui », « Fire »
+    devient « Feu », « 50.0 » devient « 50 ». N'échoue pas : un texte
+    non reconnu est renvoyé tel quel."""
+    if texte == "True":
+        return "Oui"
+    if texte == "False":
+        return "Non"
+    if texte in NOMS_TYPES_FR:
+        return NOMS_TYPES_FR[texte]
+    try:
+        nombre = float(texte)
+    except ValueError:
+        return texte
+    if nombre.is_integer():
+        return str(int(nombre))
+    return texte

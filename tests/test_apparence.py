@@ -6,7 +6,7 @@ import pytest
 
 from apparence import (COULEUR_MENU_TYPE, COULEURS_TYPES, NOMS_TYPES_FR,
                        chemin_image_type, couleur_pour_valeur, couleur_type,
-                       nom_type_fr)
+                       formater_cellule, nom_type_fr)
 
 
 # Chaque ligne teste les deux côtés d'un seuil : la couleur doit changer
@@ -60,3 +60,13 @@ def test_image_de_type_presente(tmp_path) -> None:
     with open(chemin, "wb") as fichier:
         fichier.write(b"image")
     assert chemin_image_type("Fire", str(tmp_path)) == chemin
+
+
+@pytest.mark.parametrize("texte, attendu", [
+    ("True", "Oui"), ("False", "Non"),
+    ("Fire", "Feu"), ("Aucun", "Aucun"),
+    ("50.0", "50"), ("78", "78"), ("12.5", "12.5"),
+    ("2026-11-12 18:04:00", "2026-11-12 18:04:00"), ("", ""),
+])
+def test_formater_cellule(texte: str, attendu: str) -> None:
+    assert formater_cellule(texte) == attendu

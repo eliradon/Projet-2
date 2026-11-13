@@ -8,7 +8,7 @@ est levée.
 
 from abc import ABC, abstractmethod
 
-from exceptions import DonneeInvalideError
+from logique.exceptions import DonneeInvalideError
 
 # Valeur du Type 2 quand le Pokémon n'a pas de second type.
 AUCUN_TYPE = "Aucun"

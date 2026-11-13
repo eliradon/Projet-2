@@ -9,8 +9,8 @@ from datetime import datetime
 
 import pytest
 
-from exceptions import HistoriqueInaccessibleError
-from historique import Historique
+from logique.exceptions import HistoriqueInaccessibleError
+from logique.historique import Historique
 
 COLONNES = ["Attack", "Type 1", "HP"]
 

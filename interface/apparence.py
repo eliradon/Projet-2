@@ -8,8 +8,10 @@ de couleur peuvent être testées sans ouvrir de fenêtre.
 import os
 
 # Dossier facultatif des images de type : assets/types/fire.png, etc.
+# Le dossier « assets » est à la racine du dépôt, à côté de « interface/ ».
 DOSSIER_IMAGES_TYPES = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "assets", "types")
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "assets", "types")
 
 # --- Palette générale (codes repris de la maquette) ---
 COULEUR_FOND = "#F3F4F7"

@@ -17,10 +17,12 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from exceptions import ModeleIntrouvableError
-from variables import AUCUN_TYPE
+from logique.exceptions import ModeleIntrouvableError
+from logique.variables import AUCUN_TYPE
 
-DOSSIER_PROJET = os.path.dirname(os.path.abspath(__file__))
+# Racine du dépôt : le dossier parent de « logique/ », là où se trouvent
+# Pokemon.csv et predicteur.py.
+DOSSIER_PROJET = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOSSIER_MODELES = os.path.join(DOSSIER_PROJET, "modeles")
 NOM_FICHIER_MODELE = "modele.joblib"
 NOM_FICHIER_METADONNEES = "metadonnees.json"

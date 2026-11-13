@@ -8,12 +8,12 @@ import csv
 import os
 from datetime import datetime
 
-from exceptions import HistoriqueInaccessibleError
+from logique.exceptions import HistoriqueInaccessibleError
 
-# Le fichier est placé à côté de ce module, quel que soit le dossier
-# depuis lequel on lance l'application.
-CHEMIN_PAR_DEFAUT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                 "historique.csv")
+# Le fichier est placé à la racine du dépôt (le dossier parent de
+# « logique/ »), quel que soit le dossier depuis lequel on lance l'application.
+DOSSIER_PROJET = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CHEMIN_PAR_DEFAUT = os.path.join(DOSSIER_PROJET, "historique.csv")
 COLONNE_DATE = "date"
 FORMAT_DATE = "%Y-%m-%d %H:%M:%S"
 

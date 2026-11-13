@@ -2,8 +2,8 @@
 
 import pytest
 
-from exceptions import DonneeInvalideError
-from variables import (AUCUN_TYPE, Variable, VariableCategorielle,
+from logique.exceptions import DonneeInvalideError
+from logique.variables import (AUCUN_TYPE, Variable, VariableCategorielle,
                        VariableNumerique, creer_variable,
                        verifier_types_differents)
 

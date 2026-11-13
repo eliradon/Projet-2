@@ -2,9 +2,9 @@
 
 import customtkinter as ctk
 
-from exceptions import ModeleIntrouvableError
-from modele import Modele
-from UI import Application, afficher_erreur_fatale
+from interface.UI import Application, afficher_erreur_fatale
+from logique.exceptions import ModeleIntrouvableError
+from logique.modele import Modele
 
 
 def main() -> None:

@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from apparence import (COULEUR_MENU_TYPE, COULEURS_TYPES, NOMS_TYPES_FR,
+from interface.apparence import (COULEUR_MENU_TYPE, COULEURS_TYPES, NOMS_TYPES_FR,
                        chemin_image_type, couleur_pour_valeur, couleur_type,
                        formater_cellule, nom_type_fr)
 

@@ -10,11 +10,11 @@ import os
 import numpy as np
 import pytest
 
-import modele as module_modele
-from exceptions import ModeleIntrouvableError
-from modele import (NOM_FICHIER_METADONNEES, NOM_FICHIER_MODELE, Modele,
+from logique import modele as module_modele
+from logique.exceptions import ModeleIntrouvableError
+from logique.modele import (NOM_FICHIER_METADONNEES, NOM_FICHIER_MODELE, Modele,
                     arrondir_pv, chronometre, sauvegarder_modele)
-from variables import AUCUN_TYPE
+from logique.variables import AUCUN_TYPE
 
 
 @pytest.fixture(scope="module")

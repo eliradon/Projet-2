@@ -16,11 +16,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from PIL import Image
 
-import apparence
-from exceptions import DonneeInvalideError, HistoriqueInaccessibleError
-from historique import COLONNE_DATE, Historique
-from modele import Modele, arrondir_pv
-from variables import (AUCUN_TYPE, Variable, VariableCategorielle,
+from interface import apparence
+from logique.exceptions import DonneeInvalideError, HistoriqueInaccessibleError
+from logique.historique import COLONNE_DATE, Historique
+from logique.modele import Modele, arrondir_pv
+from logique.variables import (AUCUN_TYPE, Variable, VariableCategorielle,
                        VariableNumerique, creer_variable,
                        verifier_types_differents)
 

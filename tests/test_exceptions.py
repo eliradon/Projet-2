@@ -2,7 +2,7 @@
 
 import pytest
 
-from exceptions import DonneeInvalideError, ModeleIntrouvableError
+from logique.exceptions import DonneeInvalideError, ModeleIntrouvableError
 
 
 def test_donnee_invalide_conserve_son_message() -> None:

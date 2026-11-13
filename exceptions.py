@@ -21,3 +21,11 @@ class ModeleIntrouvableError(Exception):
     Exemple : « Pokemon.csv » ou « predicteur.py » est introuvable au moment
     de la première sauvegarde du modèle.
     """
+
+
+class HistoriqueInaccessibleError(Exception):
+    """Erreur levée quand le fichier d'historique ne peut pas être lu ou écrit.
+
+    Exemple : le fichier a été modifié à la main et n'a plus les bonnes
+    colonnes, ou le dossier est protégé en écriture.
+    """

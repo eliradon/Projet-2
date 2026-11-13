@@ -1,9 +1,12 @@
 """Tests des couleurs et des libellés (apparence.py)."""
 
+import os
+
 import pytest
 
 from apparence import (COULEUR_MENU_TYPE, COULEURS_TYPES, NOMS_TYPES_FR,
-                       couleur_pour_valeur, couleur_type, nom_type_fr)
+                       chemin_image_type, couleur_pour_valeur, couleur_type,
+                       nom_type_fr)
 
 
 # Chaque ligne teste les deux côtés d'un seuil : la couleur doit changer
@@ -46,3 +49,14 @@ def test_couleur_type() -> None:
 def test_dictionnaires_couvrent_les_memes_18_types() -> None:
     assert len(NOMS_TYPES_FR) == 18
     assert set(NOMS_TYPES_FR) == set(COULEURS_TYPES)
+
+
+def test_image_de_type_absente(tmp_path) -> None:
+    assert chemin_image_type("Fire", str(tmp_path)) is None
+
+
+def test_image_de_type_presente(tmp_path) -> None:
+    chemin = os.path.join(tmp_path, "fire.png")
+    with open(chemin, "wb") as fichier:
+        fichier.write(b"image")
+    assert chemin_image_type("Fire", str(tmp_path)) == chemin

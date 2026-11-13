@@ -5,6 +5,12 @@ aucun code hexadécimal écrit directement dans ses widgets, et les règles
 de couleur peuvent être testées sans ouvrir de fenêtre.
 """
 
+import os
+
+# Dossier facultatif des images de type : assets/types/fire.png, etc.
+DOSSIER_IMAGES_TYPES = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "assets", "types")
+
 # --- Palette générale (codes repris de la maquette) ---
 COULEUR_FOND = "#F3F4F7"
 COULEUR_CARTE = "#FFFFFF"
@@ -21,6 +27,8 @@ COULEUR_RADAR = "#2E9DB8"
 COULEUR_HISTOGRAMME = "#9CC9D8"
 COULEUR_PREDICTION = "#D9480F"
 COULEUR_ERREUR = "#B3261E"
+COULEUR_INTERRUPTEUR_ACTIF = "#23CD5E"
+COULEUR_TEXTE_CLAIR = "#FFFFFF"
 
 # --- Couleur d'une barre de statistique selon sa valeur ---
 # Chaque couple donne la valeur à partir de laquelle la couleur s'applique.
@@ -98,3 +106,14 @@ def couleur_type(type_anglais: str) -> str:
     """Reçoit un type en anglais et renvoie la couleur de sa pastille.
     N'échoue pas : un type inconnu (ou « Aucun ») donne la couleur neutre du menu."""
     return COULEURS_TYPES.get(type_anglais, COULEUR_MENU_TYPE)
+
+
+def chemin_image_type(type_anglais: str,
+                      dossier: str = DOSSIER_IMAGES_TYPES) -> str | None:
+    """Reçoit un type en anglais et renvoie le chemin de son image
+    (ex. assets/types/fire.png) si le fichier existe, sinon None.
+    N'échoue pas : l'image est facultative."""
+    chemin = os.path.join(dossier, type_anglais.lower() + ".png")
+    if os.path.exists(chemin):
+        return chemin
+    return None

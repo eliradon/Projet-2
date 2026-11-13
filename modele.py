@@ -1,0 +1,212 @@
+"""Sauvegarde, chargement et utilisation du modèle de prédiction.
+
+C'est le SEUL module qui importe « predicteur », et il le fait à
+l'intérieur d'une fonction : importer predicteur.py relance tout
+l'entraînement. On le fait donc une seule fois, pour enregistrer le
+modèle et ses métadonnées dans le dossier « modeles/ ». Ensuite
+l'application relit simplement ces deux fichiers.
+"""
+
+import functools
+import json
+import os
+import pickle
+import time
+
+import joblib
+import numpy as np
+import pandas as pd
+
+from exceptions import ModeleIntrouvableError
+from variables import AUCUN_TYPE
+
+DOSSIER_PROJET = os.path.dirname(os.path.abspath(__file__))
+DOSSIER_MODELES = os.path.join(DOSSIER_PROJET, "modeles")
+NOM_FICHIER_MODELE = "modele.joblib"
+NOM_FICHIER_METADONNEES = "metadonnees.json"
+
+# Colonnes numériques du CSV, dans l'ordre d'affichage, avec leur libellé.
+LIBELLES_NUMERIQUES = {
+    "Attack": "Attaque",
+    "Defense": "Défense",
+    "Sp. Atk": "Att. Spé.",
+    "Sp. Def": "Déf. Spé.",
+    "Speed": "Vitesse",
+}
+COLONNE_CIBLE = "HP"
+COLONNE_LEGENDAIRE = "Legendary"
+LARGEUR_CLASSE_HISTOGRAMME = 20
+
+# Erreurs possibles quand un des deux fichiers est abîmé. Un fichier
+# .joblib corrompu peut échouer de plusieurs façons selon son contenu ;
+# json.JSONDecodeError est une sorte de ValueError.
+ERREURS_DE_LECTURE = (OSError, EOFError, ValueError, ImportError,
+                      AttributeError, IndexError, KeyError,
+                      pickle.UnpicklingError)
+
+
+def chronometre(fonction):
+    """Décorateur : reçoit une fonction et renvoie la même fonction, qui
+    affiche en plus sa durée d'exécution dans le terminal."""
+    @functools.wraps(fonction)
+    def fonction_chronometree(*args, **kwargs):
+        debut = time.perf_counter()
+        resultat = fonction(*args, **kwargs)
+        duree = time.perf_counter() - debut
+        print(f"{fonction.__name__} : {duree:.2f} s")
+        return resultat
+    return fonction_chronometree
+
+
+def construire_metadonnees(donnees: pd.DataFrame, colonnes_modele: list[str],
+                           mae: float, r2: float) -> dict:
+    """Reçoit le tableau du CSV, l'ordre des colonnes du modèle et ses deux
+    métriques ; renvoie le dictionnaire de métadonnées décrit dans le plan.
+
+    Échoue avec KeyError si une colonne attendue manque dans le tableau.
+    """
+    variables = []
+    for nom, libelle in LIBELLES_NUMERIQUES.items():
+        variables.append({
+            "nom": nom, "libelle": libelle, "type": "numerique",
+            "min": int(donnees[nom].min()), "max": int(donnees[nom].max()),
+            "defaut": int(donnees[nom].median()),
+        })
+
+    # Les types sont les colonnes du modèle qui ne sont ni une statistique
+    # ni « Legendary ». On les trie pour un affichage stable.
+    types = sorted(colonne for colonne in colonnes_modele
+                   if colonne not in LIBELLES_NUMERIQUES
+                   and colonne != COLONNE_LEGENDAIRE)
+    variables.append({"nom": "Type 1", "libelle": "Type 1",
+                      "type": "categorielle", "valeurs": types})
+    variables.append({"nom": "Type 2", "libelle": "Type 2",
+                      "type": "categorielle", "valeurs": [AUCUN_TYPE] + types,
+                      "optionnelle": True})
+    variables.append({"nom": COLONNE_LEGENDAIRE, "libelle": "Légendaire",
+                      "type": "categorielle", "valeurs": [False, True]})
+
+    # Calculs vectorisés avec NumPy : aucune boucle sur les 800 Pokémon.
+    pv = donnees[COLONNE_CIBLE].to_numpy()
+    reference_mae = np.mean(np.abs(pv - pv.mean()))
+    bornes_classes = np.arange(0, pv.max() + LARGEUR_CLASSE_HISTOGRAMME,
+                               LARGEUR_CLASSE_HISTOGRAMME)
+    effectifs, bornes = np.histogram(pv, bins=bornes_classes)
+
+    return {
+        "cible": {"nom": COLONNE_CIBLE, "libelle": "PV",
+                  "min": int(pv.min()), "max": int(pv.max())},
+        "variables": variables,
+        "colonnes_modele": list(colonnes_modele),
+        "metrique": {"nom": "MAE", "valeur": float(mae), "r2": float(r2),
+                     "reference_mae": float(reference_mae)},
+        "distribution_cible": {"bornes": bornes.tolist(),
+                               "effectifs": effectifs.tolist()},
+    }
+
+
+@chronometre
+def sauvegarder_modele(dossier: str = DOSSIER_MODELES) -> None:
+    """Entraîne le modèle (en important predicteur) et l'enregistre dans
+    « dossier », avec le fichier JSON de métadonnées. Ne renvoie rien.
+
+    Échoue avec ModeleIntrouvableError si Pokemon.csv ou predicteur.py est
+    introuvable, si l'import échoue ou si l'écriture est impossible.
+    """
+    for nom_fichier in ["Pokemon.csv", "predicteur.py"]:
+        if not os.path.exists(os.path.join(DOSSIER_PROJET, nom_fichier)):
+            raise ModeleIntrouvableError(
+                f"Le fichier « {nom_fichier} » est introuvable.")
+    try:
+        import predicteur  # exécute tout le script : lecture, entraînement
+    except (ImportError, OSError):
+        raise ModeleIntrouvableError(
+            "Le modèle n'a pas pu être entraîné à partir de predicteur.py."
+        ) from None
+
+    # L'ordre des colonnes change à chaque entraînement : on le lit dans le
+    # modèle lui-même au lieu de le supposer.
+    colonnes_modele = list(predicteur.model.feature_names_in_)
+    metadonnees = construire_metadonnees(
+        predicteur.data, colonnes_modele,
+        predicteur.mae_scores.mean(), predicteur.r2_scores.mean())
+    try:
+        os.makedirs(dossier, exist_ok=True)
+        joblib.dump(predicteur.model, os.path.join(dossier, NOM_FICHIER_MODELE))
+        chemin_json = os.path.join(dossier, NOM_FICHIER_METADONNEES)
+        with open(chemin_json, "w", encoding="utf-8") as fichier:
+            json.dump(metadonnees, fichier, ensure_ascii=False, indent=2)
+    except OSError:
+        raise ModeleIntrouvableError(
+            "Le modèle n'a pas pu être enregistré sur le disque.") from None
+
+
+class Modele:
+    """Le modèle sauvegardé et ses métadonnées, prêts à prédire."""
+
+    def __init__(self, dossier: str = DOSSIER_MODELES) -> None:
+        """Reçoit le dossier des deux fichiers. Ne renvoie rien, n'échoue
+        pas : rien n'est lu avant l'appel de charger()."""
+        self._dossier = dossier
+        self._modele = None
+        self._metadonnees = None
+
+    @property
+    def metadonnees(self) -> dict:
+        """Renvoie le dictionnaire de métadonnées.
+        Échoue avec ModeleIntrouvableError si charger() n'a pas été appelée."""
+        if self._metadonnees is None:
+            raise ModeleIntrouvableError("Le modèle n'est pas chargé.")
+        return self._metadonnees
+
+    def charger(self) -> None:
+        """Lit le modèle et les métadonnées. Si l'un des deux fichiers est
+        absent, appelle d'abord sauvegarder_modele() pour les créer.
+
+        Ne renvoie rien. Échoue avec ModeleIntrouvableError si les fichiers
+        ne peuvent être ni créés ni lus.
+        """
+        chemin_modele = os.path.join(self._dossier, NOM_FICHIER_MODELE)
+        chemin_json = os.path.join(self._dossier, NOM_FICHIER_METADONNEES)
+        if not (os.path.exists(chemin_modele) and os.path.exists(chemin_json)):
+            sauvegarder_modele(self._dossier)
+        try:
+            self._modele = joblib.load(chemin_modele)
+            with open(chemin_json, "r", encoding="utf-8") as fichier:
+                self._metadonnees = json.load(fichier)
+        except ERREURS_DE_LECTURE:
+            raise ModeleIntrouvableError(
+                "Les fichiers du modèle sont illisibles. Supprimez le "
+                "dossier « modeles » puis relancez l'application.") from None
+
+    def _types_connus(self) -> list[str]:
+        """Renvoie la liste des types (en anglais) connus du modèle."""
+        for variable in self.metadonnees["variables"]:
+            if variable["nom"] == "Type 1":
+                return variable["valeurs"]
+        return []
+
+    def predire(self, valeurs: dict) -> float:
+        """Reçoit les valeurs validées, par nom de colonne du CSV (ex.
+        {"Attack": 50, ..., "Type 1": "Fire", "Type 2": "Aucun",
+        "Legendary": False}) et renvoie les PV prédits.
+
+        Échoue avec ModeleIntrouvableError si le modèle n'est pas chargé et
+        avec KeyError s'il manque une valeur.
+        """
+        types = self._types_connus()
+        ligne = {}
+        for colonne in self.metadonnees["colonnes_modele"]:
+            if colonne in types:
+                # Même encodage que predicteur.py : 1 si le Pokémon a ce
+                # type (en type 1 ou en type 2), 0 sinon.
+                ligne[colonne] = (int(valeurs["Type 1"] == colonne)
+                                  + int(valeurs["Type 2"] == colonne))
+            else:
+                # Statistique, ou Legendary (True devient 1.0, False 0.0).
+                ligne[colonne] = float(valeurs[colonne])
+        # Le tableau d'une seule ligne reprend l'ordre exact des colonnes
+        # utilisé à l'entraînement.
+        tableau = pd.DataFrame([ligne],
+                               columns=self.metadonnees["colonnes_modele"])
+        return float(self._modele.predict(tableau)[0])

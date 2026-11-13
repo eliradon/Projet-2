@@ -105,6 +105,16 @@ def construire_metadonnees(donnees: pd.DataFrame, colonnes_modele: list[str],
     }
 
 
+def arrondir_pv(pv: float, minimum: int) -> int:
+    """Reçoit les PV prédits et le minimum possible ; renvoie les PV arrondis
+    à l'entier, sans jamais descendre sous « minimum ». N'échoue pas.
+
+    Une régression linéaire peut donner une valeur négative pour des
+    saisies extrêmes : un Pokémon ne peut pas avoir moins de 1 PV.
+    """
+    return max(minimum, round(pv))
+
+
 @chronometre
 def sauvegarder_modele(dossier: str = DOSSIER_MODELES) -> None:
     """Entraîne le modèle (en important predicteur) et l'enregistre dans

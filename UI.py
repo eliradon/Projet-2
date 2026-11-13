@@ -13,16 +13,18 @@ import customtkinter as ctk
 from PIL import Image
 
 import apparence
-from exceptions import DonneeInvalideError
+from exceptions import DonneeInvalideError, HistoriqueInaccessibleError
 from historique import Historique
-from modele import Modele
+from modele import Modele, arrondir_pv
 from variables import (AUCUN_TYPE, Variable, VariableCategorielle,
-                       VariableNumerique, creer_variable)
+                       VariableNumerique, creer_variable,
+                       verifier_types_differents)
 
 TITRE = "Prédicteur de PV — Pokémon"
 ONGLET_PREDICTION = "Prédiction"
 ONGLET_HISTORIQUE = "Historique"
 MARGE = 20
+TEXTE_PV_VIDE = "—"
 
 
 def afficher_erreur_fatale(message: str) -> None:
@@ -95,8 +97,19 @@ class LigneStatistique(ctk.CTkFrame):
 
     def reinitialiser(self) -> None:
         """Remet le champ et le curseur à la valeur par défaut."""
+        self.marquer_erreur(False)
         self._ecrire(str(self._variable.defaut))
         self._placer_curseur(self._variable.defaut)
+
+    def marquer_erreur(self, en_erreur: bool) -> None:
+        """Reçoit True pour encadrer le champ en rouge, False pour lui
+        rendre sa bordure normale."""
+        if en_erreur:
+            self._champ.configure(border_width=2,
+                                  border_color=apparence.COULEUR_ERREUR)
+        else:
+            self._champ.configure(border_width=1,
+                                  border_color=apparence.COULEUR_BORDURE)
 
     def _ecrire(self, texte: str) -> None:
         """Remplace le contenu du champ par « texte »."""
@@ -125,6 +138,43 @@ class LigneStatistique(ctk.CTkFrame):
         else:
             self._placer_curseur(valeur)
         self._sur_changement()
+
+
+class LigneResultat(ctk.CTkFrame):
+    """La ligne PV : même gabarit qu'une statistique, mais en lecture seule."""
+
+    def __init__(self, parent, libelle: str, maximum: float) -> None:
+        """Reçoit le widget parent, le libellé (« PV ») et la plus grande
+        valeur possible, qui correspond à une barre pleine."""
+        super().__init__(parent, fg_color=apparence.COULEUR_FOND_ACCENT,
+                         corner_radius=0)
+        self._maximum = maximum
+        self.grid_columnconfigure(2, weight=1)
+
+        etiquette = ctk.CTkLabel(self, text=libelle, width=96, anchor="e",
+                                 text_color=apparence.COULEUR_ACCENT,
+                                 font=ctk.CTkFont(size=17, weight="bold"))
+        etiquette.grid(row=0, column=0, padx=(0, 16), pady=8)
+        self._valeur = ctk.CTkLabel(self, width=76, height=44,
+                                    text_color=apparence.COULEUR_ACCENT,
+                                    font=ctk.CTkFont(size=30, weight="bold"))
+        self._valeur.grid(row=0, column=1, padx=(0, 16), pady=8)
+        self._barre = ctk.CTkProgressBar(
+            self, height=18, fg_color=apparence.COULEUR_SEPARATEUR)
+        self._barre.grid(row=0, column=2, sticky="ew", padx=(0, 12))
+        self.vider()
+
+    def afficher(self, pv: int) -> None:
+        """Reçoit les PV prédits ; affiche le nombre et remplit la barre."""
+        self._valeur.configure(text=str(pv))
+        # La barre attend une proportion entre 0 (vide) et 1 (pleine).
+        self._barre.set(min(1.0, pv / self._maximum))
+        self._barre.configure(progress_color=apparence.couleur_pour_valeur(pv))
+
+    def vider(self) -> None:
+        """Revient à l'état initial : « — » et barre vide."""
+        self._valeur.configure(text=TEXTE_PV_VIDE)
+        self._barre.set(0)
 
 
 class SelecteurType(ctk.CTkFrame):
@@ -219,7 +269,8 @@ class Application(ctk.CTk):
 
         self.title(TITRE)
         self.geometry("1280x860")
-        self.minsize(1000, 700)
+        # En dessous de cette taille, le bas de la carte de saisie serait coupé.
+        self.minsize(1100, 860)
         self._construire()
 
     def _construire(self) -> None:
@@ -278,6 +329,11 @@ class Application(ctk.CTk):
         zone_types = ctk.CTkFrame(carte, fg_color="transparent")
         zone_types.pack(fill="x", padx=28, pady=(20, 0))
 
+        cible = self._modele.metadonnees["cible"]
+        self._ligne_pv = LigneResultat(zone_statistiques, cible["libelle"],
+                                       cible["max"])
+        self._ligne_pv.pack(fill="x")
+
         self._lignes: dict[str, LigneStatistique] = {}
         self._selecteurs: dict[str, SelecteurType] = {}
         for variable in self._variables:
@@ -294,6 +350,123 @@ class Application(ctk.CTk):
                                           self._sur_changement)
                 selecteur.pack(side="left", padx=(0, 20))
                 self._selecteurs[variable.nom] = selecteur
+        self._construire_actions(carte)
+
+    def _construire_actions(self, carte: ctk.CTkFrame) -> None:
+        """Reçoit la carte de gauche et y ajoute, sous la saisie : la zone
+        des messages, les deux boutons et l'encadré du résultat."""
+        self._message = ctk.CTkLabel(carte, text="", anchor="w", justify="left",
+                                     text_color=apparence.COULEUR_ERREUR,
+                                     font=ctk.CTkFont(size=14))
+        self._message.pack(fill="x", padx=28, pady=(16, 8))
+
+        zone_boutons = ctk.CTkFrame(carte, fg_color="transparent")
+        zone_boutons.pack(fill="x", padx=28)
+        bouton_predire = ctk.CTkButton(
+            zone_boutons, text="Prédire", height=48, width=140,
+            corner_radius=10, fg_color=apparence.COULEUR_BOUTON_PRINCIPAL,
+            hover_color=apparence.COULEUR_ACCENT,
+            text_color=apparence.COULEUR_TEXTE_CLAIR,
+            font=ctk.CTkFont(size=17, weight="bold"),
+            command=self._sur_predire)
+        bouton_predire.pack(side="left", padx=(0, 12))
+        bouton_reinitialiser = ctk.CTkButton(
+            zone_boutons, text="Réinitialiser", height=48, width=150,
+            corner_radius=10, border_width=1,
+            fg_color=apparence.COULEUR_CARTE,
+            hover_color=apparence.COULEUR_FOND,
+            border_color=apparence.COULEUR_TEXTE_SECONDAIRE,
+            text_color=apparence.COULEUR_TEXTE,
+            font=ctk.CTkFont(size=17), command=self._reinitialiser)
+        bouton_reinitialiser.pack(side="left")
+
+        # L'encadré du résultat n'est affiché qu'après une prédiction.
+        self._encadre_resultat = ctk.CTkFrame(
+            carte, fg_color=apparence.COULEUR_FOND_ACCENT, corner_radius=10)
+        self._phrase_resultat = ctk.CTkLabel(
+            self._encadre_resultat, text="", anchor="w",
+            text_color=apparence.COULEUR_TEXTE,
+            font=ctk.CTkFont(size=20, weight="bold"))
+        self._phrase_resultat.pack(fill="x", padx=20, pady=(14, 0))
+        self._phrase_erreur_moyenne = ctk.CTkLabel(
+            self._encadre_resultat, text="", anchor="w",
+            text_color=apparence.COULEUR_TEXTE_SECONDAIRE,
+            font=ctk.CTkFont(size=14))
+        self._phrase_erreur_moyenne.pack(fill="x", padx=20, pady=(0, 14))
+
+    def _lire_saisies(self) -> dict:
+        """Renvoie les saisies brutes, non validées : {nom de variable: saisie}."""
+        saisies = {}
+        for nom, ligne in self._lignes.items():
+            saisies[nom] = ligne.lire()
+        for nom, selecteur in self._selecteurs.items():
+            saisies[nom] = selecteur.lire()
+        saisies[self._variable_legendaire.nom] = self._interrupteur.get() == 1
+        return saisies
+
+    def _valider_saisies(self, saisies: dict) -> tuple[dict, list[str]]:
+        """Reçoit les saisies brutes ; renvoie les valeurs validées et la
+        liste des messages d'erreur (vide si tout est valide). Encadre en
+        rouge les champs fautifs. N'échoue pas : les erreurs sont accumulées."""
+        valeurs = {}
+        erreurs = []
+        for variable in self._variables:
+            try:
+                valeurs[variable.nom] = variable.valider(saisies[variable.nom])
+            except DonneeInvalideError as erreur:
+                erreurs.append(str(erreur))
+            if variable.nom in self._lignes:
+                self._lignes[variable.nom].marquer_erreur(
+                    variable.nom not in valeurs)
+        if "Type 1" in valeurs and "Type 2" in valeurs:
+            try:
+                verifier_types_differents(valeurs["Type 1"], valeurs["Type 2"])
+            except DonneeInvalideError as erreur:
+                erreurs.append(str(erreur))
+        return valeurs, erreurs
+
+    def _sur_predire(self) -> None:
+        """Appelée au clic sur Prédire : valide, prédit, affiche, enregistre."""
+        valeurs, erreurs = self._valider_saisies(self._lire_saisies())
+        if erreurs:
+            # État « Saisie invalide » : une erreur par ligne, PV inchangés.
+            self._message.configure(text="\n".join(erreurs))
+            return
+        self._message.configure(text="")
+
+        metadonnees = self._modele.metadonnees
+        pv = arrondir_pv(self._modele.predire(valeurs),
+                         metadonnees["cible"]["min"])
+        self._afficher_resultat(pv)
+
+        valeurs[metadonnees["cible"]["nom"]] = pv
+        try:
+            self._historique.ajouter(valeurs)
+        except HistoriqueInaccessibleError as erreur:
+            # La prédiction reste affichée ; on signale seulement le problème.
+            self._message.configure(text=str(erreur))
+
+    def _afficher_resultat(self, pv: int) -> None:
+        """Reçoit les PV prédits ; met à jour la ligne PV et la phrase."""
+        erreur_moyenne = round(self._modele.metadonnees["metrique"]["valeur"])
+        self._ligne_pv.afficher(pv)
+        self._phrase_resultat.configure(
+            text=f"Ce Pokémon aurait environ {pv} PV.")
+        self._phrase_erreur_moyenne.configure(
+            text=f"Erreur moyenne du modèle : ± {erreur_moyenne} PV")
+        self._encadre_resultat.pack(fill="x", padx=28, pady=(16, 0))
+
+    def _reinitialiser(self) -> None:
+        """Appelée au clic sur Réinitialiser : revient à l'état initial."""
+        for ligne in self._lignes.values():
+            ligne.reinitialiser()
+        for selecteur in self._selecteurs.values():
+            selecteur.reinitialiser()
+        self._interrupteur.deselect()
+        self._interrupteur.configure(text="Non")
+        self._ligne_pv.vider()
+        self._message.configure(text="")
+        self._encadre_resultat.pack_forget()
 
     def _construire_interrupteur(self, zone: ctk.CTkFrame,
                                  variable: VariableCategorielle) -> None:

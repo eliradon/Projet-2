@@ -13,7 +13,7 @@ import pytest
 import modele as module_modele
 from exceptions import ModeleIntrouvableError
 from modele import (NOM_FICHIER_METADONNEES, NOM_FICHIER_MODELE, Modele,
-                    chronometre, sauvegarder_modele)
+                    arrondir_pv, chronometre, sauvegarder_modele)
 from variables import AUCUN_TYPE
 
 
@@ -156,3 +156,15 @@ def test_chronometre_renvoie_le_resultat(capsys) -> None:
     assert addition(2, 3) == 5
     # capsys capture ce que print() a affiché.
     assert "addition" in capsys.readouterr().out
+
+
+# --- Arrondi des PV ---
+
+def test_arrondir_pv_cas_usuel() -> None:
+    assert arrondir_pv(77.6, 1) == 78
+    assert arrondir_pv(77.4, 1) == 77
+
+
+def test_arrondir_pv_jamais_sous_le_minimum() -> None:
+    assert arrondir_pv(-12.3, 1) == 1
+    assert arrondir_pv(0.2, 1) == 1

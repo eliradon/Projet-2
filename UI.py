@@ -5,11 +5,14 @@ rien et ne lit aucun fichier : il appelle les classes de variables.py,
 modele.py et historique.py.
 """
 
+import math
 import tkinter
 from collections.abc import Callable
 from tkinter import messagebox
 
 import customtkinter as ctk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 from PIL import Image
 
 import apparence
@@ -25,6 +28,8 @@ ONGLET_PREDICTION = "Prédiction"
 ONGLET_HISTORIQUE = "Historique"
 MARGE = 20
 TEXTE_PV_VIDE = "—"
+# Axes du radar après les PV, dans le sens des aiguilles d'une montre.
+ORDRE_RADAR = ["Attack", "Defense", "Speed", "Sp. Def", "Sp. Atk"]
 
 
 def afficher_erreur_fatale(message: str) -> None:
@@ -249,6 +254,96 @@ class SelecteurType(ctk.CTkFrame):
         self._pastille.grid(row=1, column=0, padx=(0, 6))
 
 
+class PanneauRadar:
+    """Graphique 1 : le profil du Pokémon sur un radar à six axes."""
+
+    def __init__(self, parent, libelles: list[str], maximum: float) -> None:
+        """Reçoit le widget parent, les six libellés (les PV en premier) et
+        la valeur qui correspond au bord extérieur du radar."""
+        self._libelles = libelles
+        self._maximum = maximum
+        # Un angle par axe, répartis régulièrement sur le tour complet.
+        self._angles = [2 * math.pi * numero / len(libelles)
+                        for numero in range(len(libelles))]
+        figure = Figure(figsize=(5, 3.4), dpi=100, layout="constrained")
+        self._axes = figure.add_subplot(projection="polar")
+        # FigureCanvasTkAgg transforme la figure Matplotlib en widget tkinter.
+        self._canevas = FigureCanvasTkAgg(figure, master=parent)
+        self._canevas.get_tk_widget().pack(fill="both", expand=True,
+                                           padx=12, pady=12)
+
+    def tracer(self, statistiques: list[float], pv: int | None) -> None:
+        """Reçoit les cinq statistiques (dans l'ordre des axes) et les PV
+        prédits, ou None s'il n'y a pas de prédiction à montrer. Redessine."""
+        axes = self._axes
+        axes.clear()
+        axes.set_theta_offset(math.pi / 2)  # premier axe (PV) en haut
+        axes.set_theta_direction(-1)        # sens des aiguilles d'une montre
+        axes.set_xticks(self._angles)
+        axes.set_xticklabels(self._libelles)
+        axes.set_ylim(0, self._maximum)
+        axes.set_yticklabels([])
+        axes.set_title("Profil du Pokémon", fontweight="bold")
+
+        if pv is None:
+            # Sans prédiction, le sommet PV n'est pas tracé : ligne ouverte.
+            axes.plot(self._angles[1:], statistiques, linewidth=2.5,
+                      color=apparence.COULEUR_ACCENT, label="Saisie")
+        else:
+            # On revient au premier point pour fermer le polygone.
+            angles = self._angles + [self._angles[0]]
+            rayons = [pv] + statistiques + [pv]
+            axes.plot(angles, rayons, linewidth=2.5,
+                      color=apparence.COULEUR_ACCENT, label="Saisie")
+            axes.fill(angles, rayons, color=apparence.COULEUR_RADAR, alpha=0.35)
+            axes.plot([self._angles[0]], [pv], "o", markersize=9,
+                      color=apparence.COULEUR_PREDICTION, label="PV prédits")
+        axes.legend(loc="upper left", bbox_to_anchor=(1.15, 1.0))
+        self._canevas.draw_idle()
+
+
+class PanneauDistribution:
+    """Graphique 2 : où se situe la prédiction parmi les PV du jeu de données."""
+
+    def __init__(self, parent, bornes: list[float], effectifs: list[int],
+                 erreur_moyenne: float) -> None:
+        """Reçoit le widget parent, les bornes et les effectifs de
+        l'histogramme (lus dans les métadonnées) et l'erreur moyenne."""
+        self._bornes = bornes
+        self._effectifs = effectifs
+        self._erreur_moyenne = erreur_moyenne
+        figure = Figure(figsize=(5, 3.4), dpi=100, layout="constrained")
+        self._axes = figure.add_subplot()
+        self._canevas = FigureCanvasTkAgg(figure, master=parent)
+        self._canevas.get_tk_widget().pack(fill="both", expand=True,
+                                           padx=12, pady=12)
+
+    def tracer(self, pv: int | None) -> None:
+        """Reçoit les PV prédits, ou None avant toute prédiction. Redessine
+        l'histogramme, puis la ligne et la bande d'erreur s'il y a des PV."""
+        axes = self._axes
+        axes.clear()
+        largeur = self._bornes[1] - self._bornes[0]
+        # Chaque barre commence à sa borne gauche (align="edge").
+        axes.bar(self._bornes[:-1], self._effectifs, width=largeur * 0.92,
+                 align="edge", color=apparence.COULEUR_HISTOGRAMME,
+                 label="Jeu de données")
+        if pv is not None:
+            axes.axvspan(pv - self._erreur_moyenne, pv + self._erreur_moyenne,
+                         color=apparence.COULEUR_PREDICTION, alpha=0.12,
+                         label="± erreur moyenne")
+            axes.axvline(pv, linewidth=2.5, color=apparence.COULEUR_PREDICTION,
+                         label=f"PV prédits ({pv})")
+        axes.set_title("Où se situe la prédiction ?", fontweight="bold")
+        axes.set_xlabel("PV")
+        axes.set_ylabel("Nombre de Pokémon")
+        axes.set_xlim(self._bornes[0], self._bornes[-1])
+        axes.spines["top"].set_visible(False)
+        axes.spines["right"].set_visible(False)
+        axes.legend(loc="upper right")
+        self._canevas.draw_idle()
+
+
 class Application(ctk.CTk):
     """Fenêtre principale. Elle CONTIENT (composition) le modèle, la liste
     des variables et l'historique, ainsi que les panneaux de l'écran."""
@@ -264,6 +359,8 @@ class Application(ctk.CTk):
         self._variables: list[Variable] = [
             creer_variable(description)
             for description in metadonnees["variables"]]
+        self._variables_par_nom = {variable.nom: variable
+                                   for variable in self._variables}
         colonnes = [variable.nom for variable in self._variables]
         self._historique = Historique(colonnes + [metadonnees["cible"]["nom"]])
 
@@ -311,13 +408,43 @@ class Application(ctk.CTk):
         self._carte_saisie.grid(row=0, column=0, rowspan=2, sticky="nsew",
                                 padx=(0, MARGE // 2))
         self._construire_saisie(self._carte_saisie)
-        self._carte_radar = creer_carte(onglet, "Profil du Pokémon")
+        # Les titres de ces deux cartes sont dessinés par Matplotlib.
+        self._carte_radar = creer_carte(onglet)
         self._carte_radar.grid(row=0, column=1, sticky="nsew",
                                padx=(MARGE // 2, 0), pady=(0, MARGE // 2))
-        self._carte_distribution = creer_carte(onglet,
-                                               "Où se situe la prédiction ?")
+        self._carte_distribution = creer_carte(onglet)
         self._carte_distribution.grid(row=1, column=1, sticky="nsew",
                                       padx=(MARGE // 2, 0), pady=(MARGE // 2, 0))
+        self._construire_graphiques()
+
+    def _construire_graphiques(self) -> None:
+        """Crée les deux graphiques à partir des métadonnées et les dessine
+        dans leur état initial (sans prédiction)."""
+        metadonnees = self._modele.metadonnees
+        cible = metadonnees["cible"]
+        libelles = [cible["libelle"]] + [
+            self._variables_par_nom[nom].libelle for nom in ORDRE_RADAR]
+        maximum = max([cible["max"]] + [
+            self._variables_par_nom[nom].maximum for nom in ORDRE_RADAR])
+        self._radar = PanneauRadar(self._carte_radar, libelles, maximum)
+        distribution = metadonnees["distribution_cible"]
+        self._distribution = PanneauDistribution(
+            self._carte_distribution, distribution["bornes"],
+            distribution["effectifs"], metadonnees["metrique"]["valeur"])
+        self._tracer_radar(None)
+        self._distribution.tracer(None)
+
+    def _tracer_radar(self, pv: int | None) -> None:
+        """Reçoit les PV à montrer (ou None) et redessine le radar avec les
+        saisies actuelles. Si une saisie est invalide, le radar ne change pas."""
+        statistiques = []
+        for nom in ORDRE_RADAR:
+            try:
+                statistiques.append(self._variables_par_nom[nom].valider(
+                    self._lignes[nom].lire()))
+            except DonneeInvalideError:
+                return
+        self._radar.tracer(statistiques, pv)
 
     def _construire_saisie(self, carte: ctk.CTkFrame) -> None:
         """Reçoit la carte de gauche et y crée un widget par variable, selon
@@ -450,6 +577,8 @@ class Application(ctk.CTk):
         """Reçoit les PV prédits ; met à jour la ligne PV et la phrase."""
         erreur_moyenne = round(self._modele.metadonnees["metrique"]["valeur"])
         self._ligne_pv.afficher(pv)
+        self._tracer_radar(pv)
+        self._distribution.tracer(pv)
         self._phrase_resultat.configure(
             text=f"Ce Pokémon aurait environ {pv} PV.")
         self._phrase_erreur_moyenne.configure(
@@ -465,6 +594,8 @@ class Application(ctk.CTk):
         self._interrupteur.deselect()
         self._interrupteur.configure(text="Non")
         self._ligne_pv.vider()
+        self._tracer_radar(None)
+        self._distribution.tracer(None)
         self._message.configure(text="")
         self._encadre_resultat.pack_forget()
 
@@ -496,8 +627,8 @@ class Application(ctk.CTk):
 
     def _sur_changement(self) -> None:
         """Appelée quand une saisie change (curseur, champ, type, interrupteur).
-        Ne fait rien pour l'instant : le radar et l'état « périmé » viendront
-        aux étapes 9 et 10."""
+        Redessine le radar, sans le sommet PV qui n'est plus à jour."""
+        self._tracer_radar(None)
 
     def _construire_onglet_historique(self, onglet: ctk.CTkFrame) -> None:
         """Reçoit le cadre de l'onglet Historique et y place sa carte."""

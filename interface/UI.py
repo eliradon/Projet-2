@@ -32,7 +32,8 @@ TEXTE_PV_VIDE = "—"
 MESSAGE_PERIME = "Cliquez sur Prédire pour mettre à jour"
 MESSAGE_HISTORIQUE_VIDE = "Aucune prédiction pour l'instant."
 # Axes du radar après les PV, dans le sens des aiguilles d'une montre.
-ORDRE_RADAR = ["Attack", "Defense", "Speed", "Sp. Def", "Sp. Atk"]
+ORDRE_RADAR = ["attack", "defense", "speed", "sp_defense", "sp_attack"]
+LARGEUR_LIBELLE = 150
 
 
 def afficher_erreur_fatale(message: str) -> None:
@@ -70,24 +71,27 @@ class LigneStatistique(ctk.CTkFrame):
         self._sur_changement = sur_changement
         self.grid_columnconfigure(2, weight=1)  # le curseur prend la place libre
 
-        libelle = ctk.CTkLabel(self, text=variable.libelle, width=96, anchor="e",
+        libelle = ctk.CTkLabel(self, text=variable.libelle,
+                               width=LARGEUR_LIBELLE, anchor="e",
                                text_color=apparence.COULEUR_TEXTE_SECONDAIRE,
-                               font=ctk.CTkFont(size=17))
-        libelle.grid(row=0, column=0, padx=(0, 16), pady=8)
+                               font=ctk.CTkFont(size=15))
+        libelle.grid(row=0, column=0, padx=(0, 16), pady=5)
 
         self._champ = ctk.CTkEntry(
-            self, width=76, height=44, corner_radius=8, border_width=1,
+            self, width=84, height=36, corner_radius=8, border_width=1,
             justify="center", fg_color=apparence.COULEUR_CARTE,
             border_color=apparence.COULEUR_BORDURE,
             text_color=apparence.COULEUR_TEXTE,
-            font=ctk.CTkFont(size=24, weight="bold"))
-        self._champ.grid(row=0, column=1, padx=(0, 16), pady=8)
+            font=ctk.CTkFont(size=20, weight="bold"))
+        self._champ.grid(row=0, column=1, padx=(0, 16), pady=5)
         # À chaque touche relâchée dans le champ, on met le curseur à jour.
         self._champ.bind("<KeyRelease>", self._sur_saisie)
 
         self._curseur = ctk.CTkSlider(
             self, from_=variable.minimum, to=variable.maximum,
-            number_of_steps=int(variable.maximum - variable.minimum),
+            # Nombre de crans : 1 par unité, ou 1 par dixième pour un décimal.
+            number_of_steps=round((variable.maximum - variable.minimum)
+                                  / variable.pas),
             height=18, fg_color=apparence.COULEUR_SEPARATEUR,
             button_color=apparence.COULEUR_TEXTE_SECONDAIRE,
             button_hover_color=apparence.COULEUR_TEXTE,
@@ -106,7 +110,7 @@ class LigneStatistique(ctk.CTkFrame):
     def reinitialiser(self) -> None:
         """Remet le champ et le curseur à la valeur par défaut."""
         self.marquer_erreur(False)
-        self._ecrire(str(self._variable.defaut))
+        self._ecrire(self._variable.formater(self._variable.defaut))
         self._placer_curseur(self._variable.defaut)
 
     def marquer_erreur(self, en_erreur: bool) -> None:
@@ -127,12 +131,17 @@ class LigneStatistique(ctk.CTkFrame):
     def _placer_curseur(self, valeur: float) -> None:
         """Déplace le curseur sur « valeur » et colore sa barre."""
         self._curseur.set(valeur)
-        self._curseur.configure(
-            progress_color=apparence.couleur_pour_valeur(valeur))
+        # Seules les statistiques de combat changent de couleur selon la
+        # valeur ; le poids, la taille et le stade gardent une couleur fixe.
+        if self._variable.statistique:
+            couleur = apparence.couleur_pour_valeur(valeur)
+        else:
+            couleur = apparence.COULEUR_RADAR
+        self._curseur.configure(progress_color=couleur)
 
     def _sur_curseur(self, valeur: float) -> None:
         """Appelée quand on déplace le curseur : recopie la valeur dans le champ."""
-        self._ecrire(str(round(valeur)))
+        self._ecrire(self._variable.formater(valeur))
         self._placer_curseur(valeur)
         self._sur_changement()
 
@@ -159,7 +168,8 @@ class LigneResultat(ctk.CTkFrame):
         self._maximum = maximum
         self.grid_columnconfigure(2, weight=1)
 
-        etiquette = ctk.CTkLabel(self, text=libelle, width=96, anchor="e",
+        etiquette = ctk.CTkLabel(self, text=libelle, width=LARGEUR_LIBELLE,
+                                 anchor="e",
                                  text_color=apparence.COULEUR_ACCENT,
                                  font=ctk.CTkFont(size=17, weight="bold"))
         etiquette.grid(row=0, column=0, padx=(0, 16), pady=8)
@@ -395,19 +405,19 @@ class OngletHistorique(ctk.CTkFrame):
         for colonne, libelle in entetes.items():
             alignement = "e" if colonne in colonnes_numeriques else "w"
             self._tableau.heading(colonne, text=libelle, anchor=alignement)
-            self._tableau.column(colonne, anchor=alignement, width=100)
-        self._tableau.column(COLONNE_DATE, width=170)
+            self._tableau.column(colonne, anchor=alignement, width=68)
+        self._tableau.column(COLONNE_DATE, width=150)
         self.actualiser()
 
     def _appliquer_style(self) -> None:
         """Règle les couleurs et les tailles du tableau (widget ttk)."""
         style = ttk.Style()
         style.theme_use("default")  # le thème de macOS ignore les couleurs
-        style.configure("Treeview", rowheight=44, font=("", 15), borderwidth=0,
+        style.configure("Treeview", rowheight=40, font=("", 14), borderwidth=0,
                         background=apparence.COULEUR_CARTE,
                         fieldbackground=apparence.COULEUR_CARTE,
                         foreground=apparence.COULEUR_TEXTE)
-        style.configure("Treeview.Heading", font=("", 13, "bold"),
+        style.configure("Treeview.Heading", font=("", 12, "bold"),
                         relief="flat", padding=8,
                         background=apparence.COULEUR_FOND,
                         foreground=apparence.COULEUR_TEXTE_SECONDAIRE)
@@ -469,8 +479,8 @@ class Application(ctk.CTk):
 
         self.title(TITRE)
         self.geometry("1280x860")
-        # En dessous de cette taille, le bas de la carte de saisie serait coupé.
-        self.minsize(1100, 860)
+        # La carte de saisie défile : la fenêtre peut être plus petite.
+        self.minsize(1100, 700)
         self._construire()
 
     def _construire(self) -> None:
@@ -508,7 +518,10 @@ class Application(ctk.CTk):
         onglet.grid_rowconfigure(0, weight=1)
         onglet.grid_rowconfigure(1, weight=1)
 
-        self._carte_saisie = creer_carte(onglet)
+        # La carte de gauche défile si la fenêtre est trop petite pour tout
+        # afficher (il y a beaucoup de variables).
+        self._carte_saisie = ctk.CTkScrollableFrame(
+            onglet, fg_color=apparence.COULEUR_CARTE, corner_radius=14)
         self._carte_saisie.grid(row=0, column=0, rowspan=2, sticky="nsew",
                                 padx=(0, MARGE // 2))
         self._construire_saisie(self._carte_saisie)
@@ -553,12 +566,12 @@ class Application(ctk.CTk):
     def _construire_saisie(self, carte: ctk.CTkFrame) -> None:
         """Reçoit la carte de gauche et y crée un widget par variable, selon
         son type : curseur, interrupteur ou liste déroulante."""
-        zone_legendaire = ctk.CTkFrame(carte, fg_color="transparent")
-        zone_legendaire.pack(fill="x", padx=28, pady=(28, 12))
         zone_statistiques = ctk.CTkFrame(carte, fg_color="transparent")
-        zone_statistiques.pack(fill="x", padx=28)
+        zone_statistiques.pack(fill="x", padx=20, pady=(16, 0))
         zone_types = ctk.CTkFrame(carte, fg_color="transparent")
-        zone_types.pack(fill="x", padx=28, pady=(20, 0))
+        zone_types.pack(fill="x", padx=20, pady=(16, 0))
+        zone_interrupteurs = ctk.CTkFrame(carte, fg_color="transparent")
+        zone_interrupteurs.pack(fill="x", padx=20, pady=(16, 0))
 
         cible = self._modele.metadonnees["cible"]
         self._ligne_pv = LigneResultat(zone_statistiques, cible["libelle"],
@@ -567,6 +580,7 @@ class Application(ctk.CTk):
 
         self._lignes: dict[str, LigneStatistique] = {}
         self._selecteurs: dict[str, SelecteurType] = {}
+        self._interrupteurs: dict[str, ctk.CTkSwitch] = {}
         for variable in self._variables:
             if isinstance(variable, VariableNumerique):
                 ligne = LigneStatistique(zone_statistiques, variable,
@@ -574,8 +588,7 @@ class Application(ctk.CTk):
                 ligne.pack(fill="x")
                 self._lignes[variable.nom] = ligne
             elif isinstance(variable.defaut, bool):
-                self._variable_legendaire = variable
-                self._construire_interrupteur(zone_legendaire, variable)
+                self._construire_interrupteur(zone_interrupteurs, variable)
             else:
                 selecteur = SelecteurType(zone_types, variable,
                                           self._sur_changement)
@@ -589,10 +602,10 @@ class Application(ctk.CTk):
         self._message = ctk.CTkLabel(carte, text="", anchor="w", justify="left",
                                      text_color=apparence.COULEUR_ERREUR,
                                      font=ctk.CTkFont(size=14))
-        self._message.pack(fill="x", padx=28, pady=(16, 8))
+        self._message.pack(fill="x", padx=20, pady=(16, 8))
 
         zone_boutons = ctk.CTkFrame(carte, fg_color="transparent")
-        zone_boutons.pack(fill="x", padx=28)
+        zone_boutons.pack(fill="x", padx=20)
         bouton_predire = ctk.CTkButton(
             zone_boutons, text="Prédire", height=48, width=140,
             corner_radius=10, fg_color=apparence.COULEUR_BOUTON_PRINCIPAL,
@@ -632,7 +645,8 @@ class Application(ctk.CTk):
             saisies[nom] = ligne.lire()
         for nom, selecteur in self._selecteurs.items():
             saisies[nom] = selecteur.lire()
-        saisies[self._variable_legendaire.nom] = self._interrupteur.get() == 1
+        for nom, interrupteur in self._interrupteurs.items():
+            saisies[nom] = interrupteur.get() == 1
         return saisies
 
     def _valider_saisies(self, saisies: dict) -> tuple[dict, list[str]]:
@@ -689,7 +703,7 @@ class Application(ctk.CTk):
             text=f"Ce Pokémon aurait environ {pv} PV.")
         self._phrase_erreur_moyenne.configure(
             text=f"Erreur moyenne du modèle : ± {erreur_moyenne} PV")
-        self._encadre_resultat.pack(fill="x", padx=28, pady=(16, 0))
+        self._encadre_resultat.pack(fill="x", padx=20, pady=(16, 20))
 
     def _reinitialiser(self) -> None:
         """Appelée au clic sur Réinitialiser : revient à l'état initial."""
@@ -697,8 +711,9 @@ class Application(ctk.CTk):
             ligne.reinitialiser()
         for selecteur in self._selecteurs.values():
             selecteur.reinitialiser()
-        self._interrupteur.deselect()
-        self._interrupteur.configure(text="Non")
+        for interrupteur in self._interrupteurs.values():
+            interrupteur.deselect()
+            interrupteur.configure(text="Non")
         self._ligne_pv.vider()
         self._tracer_radar(None)
         self._distribution.tracer(None)
@@ -708,28 +723,39 @@ class Application(ctk.CTk):
 
     def _construire_interrupteur(self, zone: ctk.CTkFrame,
                                  variable: VariableCategorielle) -> None:
-        """Reçoit la zone du haut et la variable oui/non ; y place la question
-        et l'interrupteur, désactivé par défaut."""
-        question = ctk.CTkLabel(zone, text=variable.libelle + " ?",
-                                text_color=apparence.COULEUR_TEXTE,
-                                font=ctk.CTkFont(size=26, weight="bold"))
-        question.pack(side="left", padx=(0, 20))
-        self._interrupteur = ctk.CTkSwitch(
-            zone, text="Non", switch_width=84, switch_height=44,
+        """Reçoit la zone des interrupteurs et une variable oui/non ; y ajoute
+        la question et son interrupteur (désactivé par défaut), sur une
+        grille de deux colonnes."""
+        numero = len(self._interrupteurs)
+        ligne, colonne = numero // 2, numero % 2
+        case = ctk.CTkFrame(zone, fg_color="transparent")
+        case.grid(row=ligne, column=colonne, sticky="w", padx=(0, 24), pady=4)
+        question = ctk.CTkLabel(case, text=variable.libelle + " ?", width=140,
+                                anchor="w", text_color=apparence.COULEUR_TEXTE,
+                                font=ctk.CTkFont(size=15, weight="bold"))
+        question.pack(side="left", padx=(0, 8))
+        # La lambda retient le nom de CETTE variable : chaque interrupteur
+        # appelle _sur_interrupteur avec son propre nom.
+        interrupteur = ctk.CTkSwitch(
+            case, text="Non", switch_width=52, switch_height=28,
             fg_color=apparence.COULEUR_BORDURE,
             progress_color=apparence.COULEUR_INTERRUPTEUR_ACTIF,
             button_color=apparence.COULEUR_CARTE,
             button_hover_color=apparence.COULEUR_SEPARATEUR,
             text_color=apparence.COULEUR_TEXTE_SECONDAIRE,
-            font=ctk.CTkFont(size=15), command=self._sur_interrupteur)
-        self._interrupteur.pack(side="left")
+            font=ctk.CTkFont(size=14),
+            command=lambda nom=variable.nom: self._sur_interrupteur(nom))
+        interrupteur.pack(side="left")
+        self._interrupteurs[variable.nom] = interrupteur
 
-    def _sur_interrupteur(self) -> None:
-        """Appelée quand on bascule l'interrupteur : met à jour « Oui » / « Non »."""
-        if self._interrupteur.get() == 1:
-            self._interrupteur.configure(text="Oui")
+    def _sur_interrupteur(self, nom: str) -> None:
+        """Reçoit le nom de l'interrupteur basculé et met à jour son texte
+        « Oui » / « Non »."""
+        interrupteur = self._interrupteurs[nom]
+        if interrupteur.get() == 1:
+            interrupteur.configure(text="Oui")
         else:
-            self._interrupteur.configure(text="Non")
+            interrupteur.configure(text="Non")
         self._sur_changement()
 
     def _sur_changement(self) -> None:

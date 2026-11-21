@@ -2,7 +2,9 @@
 
 Projet 2 du cours INF1007. L'application prédit les PV (HP) d'un Pokémon à
 partir de ses autres statistiques, de ses types et de son caractère
-légendaire. Le modèle est une régression linéaire entraînée sur `Pokemon.csv`.
+légendaire, son poids, sa taille et son stade d'évolution. Le modèle est une
+régression linéaire entraînée sur `pokemon_utf8.csv` (The Complete Pokédex
+Dataset, 1025 Pokémon).
 
 ## Lancer l'application
 
@@ -20,9 +22,10 @@ Sur Mac avec le Python de Homebrew, tkinter s'installe à part :
 
 ## Utiliser l'application
 
-- **Onglet Prédiction** : réglez les cinq statistiques (curseur ou champ),
-  choisissez les types et l'interrupteur « Légendaire ? », puis cliquez sur
-  **Prédire**. Les PV estimés s'affichent avec l'erreur moyenne du modèle,
+- **Onglet Prédiction** : réglez les statistiques, le poids, la taille et le
+  stade d'évolution (curseur ou champ), choisissez les types et les
+  interrupteurs (Légendaire, Sous-légendaire, Fabuleux, Forme finale), puis
+  cliquez sur **Prédire**. Les PV estimés s'affichent avec l'erreur moyenne du modèle,
   et les deux graphiques se mettent à jour.
 - **Onglet Historique** : le tableau des prédictions enregistrées dans
   `historique.csv`, les plus récentes en premier.
@@ -34,8 +37,10 @@ Sur Mac avec le Python de Homebrew, tkinter s'installe à part :
 ```
 Projet-2/
 ├── main.py              point d'entrée : charge le modèle, ouvre la fenêtre
-├── predicteur.py        entraînement du modèle
-├── Pokemon.csv          jeu de données
+├── predicteur.py        préparation des données et entraînement du modèle
+├── test_donnees.py      tests du modèle (stade d'évolution, forme finale)
+├── pokemon_utf8.csv     jeu de données d'origine
+├── pokemon_propre.csv   colonnes préparées (écrit par predicteur.py)
 ├── logique/             tout ce qui ne dépend pas de l'écran
 │   ├── exceptions.py    exceptions personnalisées
 │   ├── variables.py     classes de variables et validation des saisies
@@ -54,8 +59,8 @@ L'interface ne valide rien, ne calcule rien et ne lit aucun fichier : elle
 appelle les classes du dossier `logique/`. Les champs, leurs bornes, la liste
 des types et l'erreur moyenne viennent de `modeles/metadonnees.json`.
 
-`predicteur.py` et `Pokemon.csv` restent à la racine, car `predicteur.py`
-cherche le CSV à côté de lui.
+`predicteur.py` et les CSV restent à la racine, car `predicteur.py` cherche
+`pokemon_utf8.csv` à côté de lui.
 
 ## Tests
 
@@ -63,7 +68,8 @@ cherche le CSV à côté de lui.
 pytest
 ```
 
-Les tests couvrent la logique (cas usuels, cas limites, cas d'erreur). Aucun
+`pytest` lance nos tests du dossier `tests/` et ceux du modèle
+(`test_donnees.py`). Ils couvrent cas usuels, cas limites et cas d'erreur. Aucun
 test n'importe `interface/UI.py`, car l'intégration continue n'a pas d'écran.
 Le workflow `.github/workflows/tests.yml` lance `pytest` à chaque push.
 

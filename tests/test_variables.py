@@ -122,3 +122,27 @@ def test_creer_variable_categorielle() -> None:
 def test_creer_variable_type_inconnu() -> None:
     with pytest.raises(ValueError):
         creer_variable({"nom": "x", "libelle": "x", "type": "date"})
+
+
+# --- Variable décimale (poids, taille) ---
+
+def test_numerique_decimale() -> None:
+    taille = VariableNumerique("height_m", "Taille (m)", 0.1, 20.0, 1.0,
+                               pas=0.1, statistique=False)
+    assert taille.valider("1.5") == pytest.approx(1.5)
+    assert taille.formater(1.5) == "1.5"
+    assert taille.statistique is False
+
+
+def test_numerique_entiere_formatee_sans_decimale(attaque: VariableNumerique) -> None:
+    assert attaque.formater(50.4) == "50"
+    assert attaque.pas == 1
+
+
+def test_creer_variable_avec_pas() -> None:
+    variable = creer_variable({"nom": "weight_kg", "libelle": "Poids (kg)",
+                               "type": "numerique", "min": 0.1, "max": 999.9,
+                               "defaut": 28.0, "pas": 0.1,
+                               "statistique": False})
+    assert variable.pas == pytest.approx(0.1)
+    assert variable.statistique is False

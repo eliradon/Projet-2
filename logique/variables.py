@@ -54,13 +54,17 @@ class VariableNumerique(Variable):
     """Variable dont la valeur est un nombre compris entre deux bornes."""
 
     def __init__(self, nom: str, libelle: str, minimum: float, maximum: float,
-                 defaut: float) -> None:
-        """Reçoit le nom, le libellé, les deux bornes (incluses) et la valeur
-        par défaut. Ne renvoie rien, n'échoue pas."""
+                 defaut: float, pas: float = 1,
+                 statistique: bool = True) -> None:
+        """Reçoit le nom, le libellé, les deux bornes (incluses), la valeur
+        par défaut, le pas du curseur (1 ou 0.1) et si c'est une statistique
+        de combat. Ne renvoie rien, n'échoue pas."""
         super().__init__(nom, libelle)
         self._minimum = minimum
         self._maximum = maximum
         self._defaut = defaut
+        self._pas = pas
+        self._statistique = statistique
 
     @property
     def minimum(self) -> float:
@@ -76,6 +80,23 @@ class VariableNumerique(Variable):
     def defaut(self) -> float:
         """Renvoie la valeur affichée au lancement et après Réinitialiser."""
         return self._defaut
+
+    @property
+    def pas(self) -> float:
+        """Renvoie le pas du curseur : 1 pour un entier, 0.1 pour un décimal."""
+        return self._pas
+
+    @property
+    def statistique(self) -> bool:
+        """Renvoie True pour une statistique de combat (Attaque, Vitesse...)."""
+        return self._statistique
+
+    def formater(self, valeur: float) -> str:
+        """Reçoit une valeur et renvoie le texte à afficher dans le champ :
+        sans décimale pour un pas de 1 (« 50 »), une décimale sinon (« 1.5 »)."""
+        if self._pas >= 1:
+            return str(round(valeur))
+        return f"{valeur:.1f}"
 
     def valider(self, saisie: str | bool) -> float:
         """Reçoit le texte du champ de saisie, renvoie le nombre correspondant.
@@ -159,7 +180,9 @@ def creer_variable(description: dict) -> Variable:
     libelle = description["libelle"]
     if description["type"] == "numerique":
         return VariableNumerique(nom, libelle, description["min"],
-                                 description["max"], description["defaut"])
+                                 description["max"], description["defaut"],
+                                 description.get("pas", 1),
+                                 description.get("statistique", True))
     if description["type"] == "categorielle":
         return VariableCategorielle(nom, libelle, description["valeurs"])
     raise ValueError(f'Type de variable inconnu : "{description["type"]}".')

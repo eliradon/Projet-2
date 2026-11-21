@@ -12,8 +12,10 @@ import pytest
 
 from logique import modele as module_modele
 from logique.exceptions import ModeleIntrouvableError
-from logique.modele import (NOM_FICHIER_METADONNEES, NOM_FICHIER_MODELE, Modele,
-                    arrondir_pv, chronometre, sauvegarder_modele)
+from logique.modele import (LIBELLES_BOOLEENS, LIBELLES_NUMERIQUES,
+                            NOM_FICHIER_METADONNEES, NOM_FICHIER_MODELE,
+                            Modele, arrondir_pv, chronometre,
+                            sauvegarder_modele)
 from logique.variables import AUCUN_TYPE
 
 
@@ -41,16 +43,26 @@ def predicteur(dossier: str):
 
 
 def valeurs_de_la_ligne(predicteur, numero: int) -> dict:
-    """Transforme une ligne du CSV en dictionnaire pour Modele.predire()."""
+    """Transforme une ligne du jeu de données en dictionnaire pour
+    Modele.predire(), comme le ferait l'interface."""
+    entrees = predicteur.X.iloc[numero]
     ligne = predicteur.data.iloc[numero]
-    type_2 = ligne["Type 2"]
-    return {
-        "Attack": ligne["Attack"], "Defense": ligne["Defense"],
-        "Sp. Atk": ligne["Sp. Atk"], "Sp. Def": ligne["Sp. Def"],
-        "Speed": ligne["Speed"], "Type 1": ligne["Type 1"],
-        "Type 2": type_2 if isinstance(type_2, str) else AUCUN_TYPE,
-        "Legendary": bool(ligne["Legendary"]),
-    }
+    valeurs = {nom: entrees[nom] for nom in LIBELLES_NUMERIQUES}
+    for nom in LIBELLES_BOOLEENS:
+        valeurs[nom] = bool(entrees[nom])
+    type_2 = ligne["secondary_type"]
+    valeurs["Type 1"] = ligne["primary_type"]
+    valeurs["Type 2"] = type_2 if isinstance(type_2, str) else AUCUN_TYPE
+    return valeurs
+
+
+def exemple_feu_vol() -> dict:
+    """Un Pokémon d'exemple, type Feu / Vol, pour les tests de prédiction."""
+    return {"attack": 50, "defense": 110, "sp_attack": 130, "sp_defense": 130,
+            "speed": 90, "weight_kg": 30.0, "height_m": 1.5, "evostage": 2,
+            "Type 1": "fire", "Type 2": "flying", "is_legendary": False,
+            "is_sublegendary": False, "is_mythical": False,
+            "is_final_stage": True}
 
 
 # --- Sauvegarde ---
@@ -67,10 +79,19 @@ def test_ordre_des_colonnes_respecte(modele: Modele, predicteur) -> None:
 
 def test_bornes_calculees_depuis_les_donnees(modele: Modele, predicteur) -> None:
     attaque = modele.metadonnees["variables"][0]
-    assert attaque["nom"] == "Attack"
-    assert attaque["min"] == predicteur.data["Attack"].min()
-    assert attaque["max"] == predicteur.data["Attack"].max()
+    assert attaque["nom"] == "attack"
+    assert attaque["min"] == predicteur.X["attack"].min()
+    assert attaque["max"] == predicteur.X["attack"].max()
     assert attaque["min"] <= attaque["defaut"] <= attaque["max"]
+
+
+def test_variable_decimale(modele: Modele, predicteur) -> None:
+    variables = {v["nom"]: v for v in modele.metadonnees["variables"]}
+    taille = variables["height_m"]
+    assert taille["pas"] == pytest.approx(0.1)
+    assert taille["min"] == pytest.approx(predicteur.X["height_m"].min())
+    assert taille["statistique"] is False
+    assert variables["speed"]["statistique"] is True
 
 
 def test_types_dans_les_metadonnees(modele: Modele) -> None:
@@ -78,7 +99,8 @@ def test_types_dans_les_metadonnees(modele: Modele) -> None:
     assert len(variables["Type 1"]["valeurs"]) == 18
     assert variables["Type 2"]["valeurs"][0] == AUCUN_TYPE
     assert len(variables["Type 2"]["valeurs"]) == 19
-    assert variables["Legendary"]["valeurs"] == [False, True]
+    for nom in LIBELLES_BOOLEENS:
+        assert variables[nom]["valeurs"] == [False, True]
 
 
 def test_metriques(modele: Modele, predicteur) -> None:
@@ -91,25 +113,37 @@ def test_metriques(modele: Modele, predicteur) -> None:
 
 def test_histogramme_compte_tous_les_pokemon(modele: Modele, predicteur) -> None:
     distribution = modele.metadonnees["distribution_cible"]
-    assert sum(distribution["effectifs"]) == len(predicteur.data)
+    assert sum(distribution["effectifs"]) == len(predicteur.y)
     assert len(distribution["bornes"]) == len(distribution["effectifs"]) + 1
 
 
 # --- Prédiction ---
 
-# Lignes du CSV : 0 = deux types, 4 = pas de type 2, 162 = légendaire.
-@pytest.mark.parametrize("numero", [0, 4, 162, 799])
-def test_meme_prediction_que_predicteur(modele: Modele, predicteur,
-                                        numero: int) -> None:
+def numeros_a_tester(predicteur) -> list[int]:
+    """Renvoie quelques lignes variées : la première (deux types), une sans
+    type 2, un légendaire, un fabuleux et la dernière."""
+    donnees = predicteur.data
+    return [0,
+            int(donnees["secondary_type"].isna().to_numpy().argmax()),
+            int(predicteur.X["is_legendary"].to_numpy().argmax()),
+            int(predicteur.X["is_mythical"].to_numpy().argmax()),
+            len(donnees) - 1]
+
+
+def test_meme_prediction_que_predicteur(modele: Modele, predicteur) -> None:
+    for numero in numeros_a_tester(predicteur):
+        verifier_meme_prediction(modele, predicteur, numero)
+
+
+def verifier_meme_prediction(modele: Modele, predicteur, numero: int) -> None:
+    """Compare la prédiction de Modele à celle du modèle d'origine."""
     attendu = predicteur.model.predict(predicteur.X.iloc[[numero]])[0]
     obtenu = modele.predire(valeurs_de_la_ligne(predicteur, numero))
     assert obtenu == pytest.approx(attendu)
 
 
 def test_type_2_aucun_change_la_prediction(modele: Modele) -> None:
-    valeurs = {"Attack": 50, "Defense": 110, "Sp. Atk": 130, "Sp. Def": 130,
-               "Speed": 90, "Type 1": "Fire", "Type 2": "Flying",
-               "Legendary": False}
+    valeurs = exemple_feu_vol()
     avec_vol = modele.predire(valeurs)
     valeurs["Type 2"] = AUCUN_TYPE
     sans_type_2 = modele.predire(valeurs)
@@ -119,7 +153,7 @@ def test_type_2_aucun_change_la_prediction(modele: Modele) -> None:
 
 def test_valeur_manquante(modele: Modele) -> None:
     with pytest.raises(KeyError):
-        modele.predire({"Attack": 50})
+        modele.predire({"attack": 50})
 
 
 # --- Chargement ---

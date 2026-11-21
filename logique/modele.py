@@ -21,22 +21,40 @@ from logique.exceptions import ModeleIntrouvableError
 from logique.variables import AUCUN_TYPE
 
 # Racine du dépôt : le dossier parent de « logique/ », là où se trouvent
-# Pokemon.csv et predicteur.py.
+# pokemon_utf8.csv et predicteur.py.
 DOSSIER_PROJET = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOSSIER_MODELES = os.path.join(DOSSIER_PROJET, "modeles")
 NOM_FICHIER_MODELE = "modele.joblib"
 NOM_FICHIER_METADONNEES = "metadonnees.json"
+FICHIERS_NECESSAIRES = ["pokemon_utf8.csv", "predicteur.py"]
 
-# Colonnes numériques du CSV, dans l'ordre d'affichage, avec leur libellé.
+# Colonnes numériques du modèle, dans l'ordre d'affichage, avec leur libellé.
 LIBELLES_NUMERIQUES = {
-    "Attack": "Attaque",
-    "Defense": "Défense",
-    "Sp. Atk": "Att. Spé.",
-    "Sp. Def": "Déf. Spé.",
-    "Speed": "Vitesse",
+    "attack": "Attaque",
+    "defense": "Défense",
+    "sp_attack": "Att. Spé.",
+    "sp_defense": "Déf. Spé.",
+    "speed": "Vitesse",
+    "weight_kg": "Poids (kg)",
+    "height_m": "Taille (m)",
+    "evostage": "Stade d'évolution",
 }
-COLONNE_CIBLE = "HP"
-COLONNE_LEGENDAIRE = "Legendary"
+# Les cinq statistiques de combat : ce sont elles qu'on montre sur le radar
+# et dont la barre change de couleur selon la valeur.
+STATISTIQUES_DE_COMBAT = ["attack", "defense", "sp_attack", "sp_defense",
+                          "speed"]
+# Colonnes à valeur décimale : on les règle par pas de 0,1.
+COLONNES_DECIMALES = ["weight_kg", "height_m"]
+PAS_DECIMAL = 0.1
+
+# Colonnes oui/non du modèle (0 ou 1), avec leur libellé.
+LIBELLES_BOOLEENS = {
+    "is_legendary": "Légendaire",
+    "is_sublegendary": "Sous-légendaire",
+    "is_mythical": "Fabuleux",
+    "is_final_stage": "Forme finale",
+}
+COLONNE_CIBLE = "hp"
 LARGEUR_CLASSE_HISTOGRAMME = 20
 
 # Erreurs possibles quand un des deux fichiers est abîmé. Un fichier
@@ -60,36 +78,56 @@ def chronometre(fonction):
     return fonction_chronometree
 
 
-def construire_metadonnees(donnees: pd.DataFrame, colonnes_modele: list[str],
-                           mae: float, r2: float) -> dict:
-    """Reçoit le tableau du CSV, l'ordre des colonnes du modèle et ses deux
-    métriques ; renvoie le dictionnaire de métadonnées décrit dans le plan.
+def decrire_variable_numerique(entrees: pd.DataFrame, nom: str) -> dict:
+    """Reçoit le tableau des entrées du modèle et le nom d'une colonne
+    numérique ; renvoie sa description pour les métadonnées (bornes, valeur
+    par défaut = médiane, pas du curseur).
+
+    Échoue avec KeyError si la colonne n'existe pas dans le tableau.
+    """
+    colonne = entrees[nom]
+    if nom in COLONNES_DECIMALES:
+        pas = PAS_DECIMAL
+        minimum, maximum = float(colonne.min()), float(colonne.max())
+        defaut = round(float(colonne.median()), 1)
+    else:
+        pas = 1
+        minimum, maximum = int(colonne.min()), int(colonne.max())
+        defaut = int(colonne.median())
+    return {"nom": nom, "libelle": LIBELLES_NUMERIQUES[nom],
+            "type": "numerique", "min": minimum, "max": maximum,
+            "defaut": defaut, "pas": pas,
+            "statistique": nom in STATISTIQUES_DE_COMBAT}
+
+
+def construire_metadonnees(entrees: pd.DataFrame, cible: pd.Series,
+                           colonnes_modele: list[str], mae: float,
+                           r2: float) -> dict:
+    """Reçoit le tableau des entrées du modèle, la colonne cible (PV),
+    l'ordre des colonnes du modèle et ses deux métriques ; renvoie le
+    dictionnaire de métadonnées décrit dans le plan.
 
     Échoue avec KeyError si une colonne attendue manque dans le tableau.
     """
-    variables = []
-    for nom, libelle in LIBELLES_NUMERIQUES.items():
-        variables.append({
-            "nom": nom, "libelle": libelle, "type": "numerique",
-            "min": int(donnees[nom].min()), "max": int(donnees[nom].max()),
-            "defaut": int(donnees[nom].median()),
-        })
+    variables = [decrire_variable_numerique(entrees, nom)
+                 for nom in LIBELLES_NUMERIQUES]
 
-    # Les types sont les colonnes du modèle qui ne sont ni une statistique
-    # ni « Legendary ». On les trie pour un affichage stable.
+    # Les types sont les colonnes du modèle qui ne sont ni numériques ni
+    # oui/non. On les trie pour un affichage stable.
     types = sorted(colonne for colonne in colonnes_modele
                    if colonne not in LIBELLES_NUMERIQUES
-                   and colonne != COLONNE_LEGENDAIRE)
+                   and colonne not in LIBELLES_BOOLEENS)
     variables.append({"nom": "Type 1", "libelle": "Type 1",
                       "type": "categorielle", "valeurs": types})
     variables.append({"nom": "Type 2", "libelle": "Type 2",
                       "type": "categorielle", "valeurs": [AUCUN_TYPE] + types,
                       "optionnelle": True})
-    variables.append({"nom": COLONNE_LEGENDAIRE, "libelle": "Légendaire",
-                      "type": "categorielle", "valeurs": [False, True]})
+    for nom, libelle in LIBELLES_BOOLEENS.items():
+        variables.append({"nom": nom, "libelle": libelle,
+                          "type": "categorielle", "valeurs": [False, True]})
 
-    # Calculs vectorisés avec NumPy : aucune boucle sur les 800 Pokémon.
-    pv = donnees[COLONNE_CIBLE].to_numpy()
+    # Calculs vectorisés avec NumPy : aucune boucle sur les Pokémon.
+    pv = cible.to_numpy()
     reference_mae = np.mean(np.abs(pv - pv.mean()))
     bornes_classes = np.arange(0, pv.max() + LARGEUR_CLASSE_HISTOGRAMME,
                                LARGEUR_CLASSE_HISTOGRAMME)
@@ -122,10 +160,10 @@ def sauvegarder_modele(dossier: str = DOSSIER_MODELES) -> None:
     """Entraîne le modèle (en important predicteur) et l'enregistre dans
     « dossier », avec le fichier JSON de métadonnées. Ne renvoie rien.
 
-    Échoue avec ModeleIntrouvableError si Pokemon.csv ou predicteur.py est
-    introuvable, si l'import échoue ou si l'écriture est impossible.
+    Échoue avec ModeleIntrouvableError si pokemon_utf8.csv ou predicteur.py
+    est introuvable, si l'import échoue ou si l'écriture est impossible.
     """
-    for nom_fichier in ["Pokemon.csv", "predicteur.py"]:
+    for nom_fichier in FICHIERS_NECESSAIRES:
         if not os.path.exists(os.path.join(DOSSIER_PROJET, nom_fichier)):
             raise ModeleIntrouvableError(
                 f"Le fichier « {nom_fichier} » est introuvable.")
@@ -140,7 +178,7 @@ def sauvegarder_modele(dossier: str = DOSSIER_MODELES) -> None:
     # modèle lui-même au lieu de le supposer.
     colonnes_modele = list(predicteur.model.feature_names_in_)
     metadonnees = construire_metadonnees(
-        predicteur.data, colonnes_modele,
+        predicteur.X, predicteur.y, colonnes_modele,
         predicteur.mae_scores.mean(), predicteur.r2_scores.mean())
     try:
         os.makedirs(dossier, exist_ok=True)
@@ -215,7 +253,7 @@ class Modele:
                 ligne[colonne] = (int(valeurs["Type 1"] == colonne)
                                   + int(valeurs["Type 2"] == colonne))
             else:
-                # Statistique, ou Legendary (True devient 1.0, False 0.0).
+                # Valeur numérique, ou oui/non (True devient 1.0, False 0.0).
                 ligne[colonne] = float(valeurs[colonne])
         # Le tableau d'une seule ligne reprend l'ordre exact des colonnes
         # utilisé à l'entraînement.

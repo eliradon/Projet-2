@@ -99,15 +99,18 @@ def couleur_pour_valeur(valeur: float) -> str:
 
 
 def nom_type_fr(type_anglais: str) -> str:
-    """Reçoit un type en anglais (ex. « Fire ») et renvoie son nom français
-    (« Feu »). N'échoue pas : un type inconnu (ou « Aucun ») est renvoyé tel quel."""
-    return NOMS_TYPES_FR.get(type_anglais, type_anglais)
+    """Reçoit un type en anglais, en minuscules ou non (ex. « fire »), et
+    renvoie son nom français (« Feu »). N'échoue pas : un type inconnu
+    (ou « Aucun ») est renvoyé tel quel."""
+    # capitalize() met la première lettre en majuscule : « fire » → « Fire ».
+    return NOMS_TYPES_FR.get(type_anglais.capitalize(), type_anglais)
 
 
 def couleur_type(type_anglais: str) -> str:
-    """Reçoit un type en anglais et renvoie la couleur de sa pastille.
-    N'échoue pas : un type inconnu (ou « Aucun ») donne la couleur neutre du menu."""
-    return COULEURS_TYPES.get(type_anglais, COULEUR_MENU_TYPE)
+    """Reçoit un type en anglais, en minuscules ou non, et renvoie la couleur
+    de sa pastille. N'échoue pas : un type inconnu (ou « Aucun ») donne la
+    couleur neutre du menu."""
+    return COULEURS_TYPES.get(type_anglais.capitalize(), COULEUR_MENU_TYPE)
 
 
 def chemin_image_type(type_anglais: str,
@@ -130,8 +133,8 @@ def formater_cellule(texte: str) -> str:
         return "Oui"
     if texte == "False":
         return "Non"
-    if texte in NOMS_TYPES_FR:
-        return NOMS_TYPES_FR[texte]
+    if texte.capitalize() in NOMS_TYPES_FR:
+        return NOMS_TYPES_FR[texte.capitalize()]
     try:
         nombre = float(texte)
     except ValueError:

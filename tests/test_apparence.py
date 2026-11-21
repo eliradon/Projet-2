@@ -70,3 +70,10 @@ def test_image_de_type_presente(tmp_path) -> None:
 ])
 def test_formater_cellule(texte: str, attendu: str) -> None:
     assert formater_cellule(texte) == attendu
+
+
+def test_types_en_minuscules() -> None:
+    """Le nouveau jeu de données écrit les types en minuscules (« fire »)."""
+    assert nom_type_fr("fire") == "Feu"
+    assert couleur_type("fire") == "#E62829"
+    assert formater_cellule("water") == "Eau"

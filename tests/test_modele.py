@@ -12,10 +12,11 @@ import pytest
 
 from logique import modele as module_modele
 from logique.exceptions import ModeleIntrouvableError
-from logique.modele import (LIBELLES_BOOLEENS, LIBELLES_NUMERIQUES,
-                            NOM_FICHIER_METADONNEES, NOM_FICHIER_MODELE,
+from logique.modele import (COLONNES_RARETE, LIBELLES_BOOLEENS,
+                            LIBELLES_NUMERIQUES, NOM_FICHIER_METADONNEES,
+                            NOM_FICHIER_MODELE, NOM_RARETE, RARETE_AUCUNE,
                             Modele, arrondir_pv, chronometre,
-                            sauvegarder_modele)
+                            forme_finale_imposee, sauvegarder_modele)
 from logique.variables import AUCUN_TYPE
 
 
@@ -50,6 +51,10 @@ def valeurs_de_la_ligne(predicteur, numero: int) -> dict:
     valeurs = {nom: entrees[nom] for nom in LIBELLES_NUMERIQUES}
     for nom in LIBELLES_BOOLEENS:
         valeurs[nom] = bool(entrees[nom])
+    valeurs[NOM_RARETE] = RARETE_AUCUNE
+    for rarete, colonne in COLONNES_RARETE.items():
+        if entrees[colonne] == 1:
+            valeurs[NOM_RARETE] = rarete
     type_2 = ligne["secondary_type"]
     valeurs["Type 1"] = ligne["primary_type"]
     valeurs["Type 2"] = type_2 if isinstance(type_2, str) else AUCUN_TYPE
@@ -60,9 +65,8 @@ def exemple_feu_vol() -> dict:
     """Un Pokémon d'exemple, type Feu / Vol, pour les tests de prédiction."""
     return {"attack": 50, "defense": 110, "sp_attack": 130, "sp_defense": 130,
             "speed": 90, "weight_kg": 30.0, "height_m": 1.5, "evostage": 2,
-            "Type 1": "fire", "Type 2": "flying", "is_legendary": False,
-            "is_sublegendary": False, "is_mythical": False,
-            "is_final_stage": True}
+            "Type 1": "fire", "Type 2": "flying", NOM_RARETE: RARETE_AUCUNE,
+            "is_final_stage": False}
 
 
 # --- Sauvegarde ---
@@ -101,6 +105,8 @@ def test_types_dans_les_metadonnees(modele: Modele) -> None:
     assert len(variables["Type 2"]["valeurs"]) == 19
     for nom in LIBELLES_BOOLEENS:
         assert variables[nom]["valeurs"] == [False, True]
+    assert variables[NOM_RARETE]["valeurs"] == [
+        "Aucune", "Sous-légendaire", "Légendaire", "Fabuleux"]
 
 
 def test_metriques(modele: Modele, predicteur) -> None:
@@ -202,3 +208,33 @@ def test_arrondir_pv_cas_usuel() -> None:
 def test_arrondir_pv_jamais_sous_le_minimum() -> None:
     assert arrondir_pv(-12.3, 1) == 1
     assert arrondir_pv(0.2, 1) == 1
+
+
+# --- Rareté et forme finale ---
+
+def test_rarete_change_la_prediction(modele: Modele) -> None:
+    valeurs = exemple_feu_vol()
+    sans_rarete = modele.predire(valeurs)
+    valeurs[NOM_RARETE] = "Légendaire"
+    assert modele.predire(valeurs) != pytest.approx(sans_rarete)
+
+
+@pytest.mark.parametrize("stade, attendu", [(1, False), (3, False), (4, True)])
+def test_forme_finale_imposee(stade: int, attendu: bool) -> None:
+    assert forme_finale_imposee(stade, 4) is attendu
+
+
+def test_stade_4_impose_la_forme_finale(modele: Modele) -> None:
+    """Au stade 4, cocher ou non « Forme finale » donne la même prédiction."""
+    valeurs = exemple_feu_vol()
+    valeurs["evostage"] = 4
+    non_cochee = modele.predire(valeurs)
+    valeurs["is_final_stage"] = True
+    assert modele.predire(valeurs) == pytest.approx(non_cochee)
+
+
+def test_forme_finale_libre_avant_le_stade_4(modele: Modele) -> None:
+    valeurs = exemple_feu_vol()
+    non_cochee = modele.predire(valeurs)
+    valeurs["is_final_stage"] = True
+    assert modele.predire(valeurs) != pytest.approx(non_cochee)

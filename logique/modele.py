@@ -39,20 +39,28 @@ LIBELLES_NUMERIQUES = {
     "height_m": "Taille (m)",
     "evostage": "Stade d'évolution",
 }
-# Les cinq statistiques de combat : ce sont elles qu'on montre sur le radar
-# et dont la barre change de couleur selon la valeur.
+# Les cinq statistiques de combat : elles se règlent avec un curseur, sont
+# montrées sur le radar et leur barre change de couleur selon la valeur.
+# Les autres (poids, taille, stade) se saisissent dans une simple case.
 STATISTIQUES_DE_COMBAT = ["attack", "defense", "sp_attack", "sp_defense",
                           "speed"]
 # Colonnes à valeur décimale : on les règle par pas de 0,1.
 COLONNES_DECIMALES = ["weight_kg", "height_m"]
 PAS_DECIMAL = 0.1
 
-# Colonnes oui/non du modèle (0 ou 1), avec leur libellé.
-LIBELLES_BOOLEENS = {
-    "is_legendary": "Légendaire",
-    "is_sublegendary": "Sous-légendaire",
-    "is_mythical": "Fabuleux",
-    "is_final_stage": "Forme finale",
+# Colonne oui/non du modèle (0 ou 1), avec son libellé : une case à cocher.
+COLONNE_STADE = "evostage"
+COLONNE_FORME_FINALE = "is_final_stage"
+LIBELLES_BOOLEENS = {COLONNE_FORME_FINALE: "Forme finale"}
+
+# Rareté : un seul choix parmi quatre. Chaque choix (sauf « Aucune »)
+# correspond à une colonne 0/1 du modèle ; un Pokémon n'en a jamais deux.
+NOM_RARETE = "Rareté"
+RARETE_AUCUNE = "Aucune"
+COLONNES_RARETE = {
+    "Sous-légendaire": "is_sublegendary",
+    "Légendaire": "is_legendary",
+    "Fabuleux": "is_mythical",
 }
 COLONNE_CIBLE = "hp"
 LARGEUR_CLASSE_HISTOGRAMME = 20
@@ -112,16 +120,20 @@ def construire_metadonnees(entrees: pd.DataFrame, cible: pd.Series,
     variables = [decrire_variable_numerique(entrees, nom)
                  for nom in LIBELLES_NUMERIQUES]
 
-    # Les types sont les colonnes du modèle qui ne sont ni numériques ni
-    # oui/non. On les trie pour un affichage stable.
+    # Les types sont les colonnes du modèle qui ne sont ni numériques, ni
+    # oui/non, ni une rareté. On les trie pour un affichage stable.
+    autres_colonnes = (list(LIBELLES_NUMERIQUES) + list(LIBELLES_BOOLEENS)
+                       + list(COLONNES_RARETE.values()))
     types = sorted(colonne for colonne in colonnes_modele
-                   if colonne not in LIBELLES_NUMERIQUES
-                   and colonne not in LIBELLES_BOOLEENS)
+                   if colonne not in autres_colonnes)
     variables.append({"nom": "Type 1", "libelle": "Type 1",
                       "type": "categorielle", "valeurs": types})
     variables.append({"nom": "Type 2", "libelle": "Type 2",
                       "type": "categorielle", "valeurs": [AUCUN_TYPE] + types,
                       "optionnelle": True})
+    variables.append({"nom": NOM_RARETE, "libelle": NOM_RARETE,
+                      "type": "categorielle",
+                      "valeurs": [RARETE_AUCUNE] + list(COLONNES_RARETE)})
     for nom, libelle in LIBELLES_BOOLEENS.items():
         variables.append({"nom": nom, "libelle": libelle,
                           "type": "categorielle", "valeurs": [False, True]})
@@ -138,11 +150,19 @@ def construire_metadonnees(entrees: pd.DataFrame, cible: pd.Series,
                   "min": int(pv.min()), "max": int(pv.max())},
         "variables": variables,
         "colonnes_modele": list(colonnes_modele),
+        "rarete": dict(COLONNES_RARETE),
         "metrique": {"nom": "MAE", "valeur": float(mae), "r2": float(r2),
                      "reference_mae": float(reference_mae)},
         "distribution_cible": {"bornes": bornes.tolist(),
                                "effectifs": effectifs.tolist()},
     }
+
+
+def forme_finale_imposee(stade: float, stade_maximum: float) -> bool:
+    """Reçoit le stade d'évolution saisi et le plus grand stade possible ;
+    renvoie True si le Pokémon est forcément une forme finale (il est au
+    dernier stade : rien ne peut venir après). N'échoue pas."""
+    return stade >= stade_maximum
 
 
 def arrondir_pv(pv: float, minimum: int) -> int:
@@ -236,24 +256,41 @@ class Modele:
                 return variable["valeurs"]
         return []
 
+    def _stade_maximum(self) -> float:
+        """Renvoie le plus grand stade d'évolution connu (4 aujourd'hui)."""
+        for variable in self.metadonnees["variables"]:
+            if variable["nom"] == COLONNE_STADE:
+                return variable["max"]
+        return float("inf")
+
     def predire(self, valeurs: dict) -> float:
         """Reçoit les valeurs validées, par nom de colonne du CSV (ex.
-        {"Attack": 50, ..., "Type 1": "Fire", "Type 2": "Aucun",
-        "Legendary": False}) et renvoie les PV prédits.
+        {"attack": 50, ..., "Type 1": "fire", "Type 2": "Aucun",
+        "Rareté": "Aucune", "is_final_stage": False}) et renvoie les PV
+        prédits. Au dernier stade d'évolution, la forme finale est imposée.
 
         Échoue avec ModeleIntrouvableError si le modèle n'est pas chargé et
         avec KeyError s'il manque une valeur.
         """
         types = self._types_connus()
+        colonnes_rarete = self.metadonnees["rarete"]
+        # La colonne de la rareté choisie (None pour « Aucune »).
+        colonne_rarete = colonnes_rarete.get(valeurs[NOM_RARETE])
+        forme_finale = valeurs[COLONNE_FORME_FINALE] or forme_finale_imposee(
+            valeurs[COLONNE_STADE], self._stade_maximum())
         ligne = {}
         for colonne in self.metadonnees["colonnes_modele"]:
-            if colonne in types:
+            if colonne in colonnes_rarete.values():
+                ligne[colonne] = int(colonne == colonne_rarete)
+            elif colonne == COLONNE_FORME_FINALE:
+                ligne[colonne] = int(forme_finale)
+            elif colonne in types:
                 # Même encodage que predicteur.py : 1 si le Pokémon a ce
                 # type (en type 1 ou en type 2), 0 sinon.
                 ligne[colonne] = (int(valeurs["Type 1"] == colonne)
                                   + int(valeurs["Type 2"] == colonne))
             else:
-                # Valeur numérique, ou oui/non (True devient 1.0, False 0.0).
+                # Valeur numérique (statistique, poids, taille, stade).
                 ligne[colonne] = float(valeurs[colonne])
         # Le tableau d'une seule ligne reprend l'ordre exact des colonnes
         # utilisé à l'entraînement.

@@ -22,10 +22,11 @@ Sur Mac avec le Python de Homebrew, tkinter s'installe à part :
 
 ## Utiliser l'application
 
-- **Onglet Prédiction** : réglez les statistiques, le poids, la taille et le
-  stade d'évolution (curseur ou champ), choisissez les types et les
-  interrupteurs (Légendaire, Sous-légendaire, Fabuleux, Forme finale), puis
-  cliquez sur **Prédire**. Les PV estimés s'affichent avec l'erreur moyenne du modèle,
+- **Onglet Prédiction** : réglez les cinq statistiques (curseur ou champ),
+  saisissez le poids, la taille et le stade d'évolution (1 à 4), choisissez
+  les types, la rareté (Aucune, Sous-légendaire, Légendaire, Fabuleux) et la
+  case « Forme finale », puis cliquez sur **Prédire**. Au stade 4, la case
+  « Forme finale » est cochée d'office. Les PV estimés s'affichent avec l'erreur moyenne du modèle,
   et les deux graphiques se mettent à jour.
 - **Onglet Historique** : le tableau des prédictions enregistrées dans
   `historique.csv`, les plus récentes en premier.

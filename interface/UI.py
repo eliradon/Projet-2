@@ -19,7 +19,8 @@ from PIL import Image
 from interface import apparence
 from logique.exceptions import DonneeInvalideError, HistoriqueInaccessibleError
 from logique.historique import COLONNE_DATE, Historique
-from logique.modele import Modele, arrondir_pv
+from logique.modele import (COLONNE_STADE, NOM_RARETE, Modele, arrondir_pv,
+                            forme_finale_imposee)
 from logique.variables import (AUCUN_TYPE, Variable, VariableCategorielle,
                        VariableNumerique, creer_variable,
                        verifier_types_differents)
@@ -155,6 +156,52 @@ class LigneStatistique(ctk.CTkFrame):
         else:
             self._placer_curseur(valeur)
         self._sur_changement()
+
+
+class ChampSimple(ctk.CTkFrame):
+    """Une case de saisie seule, avec son libellé au-dessus (poids, taille,
+    stade d'évolution). Même méthodes que LigneStatistique, sans curseur."""
+
+    def __init__(self, parent, variable: VariableNumerique,
+                 sur_changement: Callable[[], None]) -> None:
+        """Reçoit le widget parent, la variable à saisir et la fonction à
+        appeler quand la saisie change."""
+        super().__init__(parent, fg_color="transparent")
+        self._variable = variable
+        etiquette = ctk.CTkLabel(self, text=variable.libelle, anchor="w",
+                                 height=18,
+                                 text_color=apparence.COULEUR_TEXTE_SECONDAIRE,
+                                 font=ctk.CTkFont(size=13))
+        etiquette.pack(fill="x", pady=(0, 6))
+        self._champ = ctk.CTkEntry(
+            self, width=120, height=40, corner_radius=8, border_width=1,
+            justify="center", fg_color=apparence.COULEUR_CARTE,
+            border_color=apparence.COULEUR_BORDURE,
+            text_color=apparence.COULEUR_TEXTE,
+            font=ctk.CTkFont(size=18, weight="bold"))
+        self._champ.pack(anchor="w")
+        # La lambda ignore l'événement reçu et appelle sur_changement().
+        self._champ.bind("<KeyRelease>", lambda evenement: sur_changement())
+        self.reinitialiser()
+
+    def lire(self) -> str:
+        """Renvoie le texte brut de la case, sans le valider."""
+        return self._champ.get()
+
+    def reinitialiser(self) -> None:
+        """Remet la valeur par défaut dans la case."""
+        self.marquer_erreur(False)
+        self._champ.delete(0, "end")
+        self._champ.insert(0, self._variable.formater(self._variable.defaut))
+
+    def marquer_erreur(self, en_erreur: bool) -> None:
+        """Reçoit True pour encadrer la case en rouge, False sinon."""
+        if en_erreur:
+            self._champ.configure(border_width=2,
+                                  border_color=apparence.COULEUR_ERREUR)
+        else:
+            self._champ.configure(border_width=1,
+                                  border_color=apparence.COULEUR_BORDURE)
 
 
 class LigneResultat(ctk.CTkFrame):
@@ -565,36 +612,83 @@ class Application(ctk.CTk):
 
     def _construire_saisie(self, carte: ctk.CTkFrame) -> None:
         """Reçoit la carte de gauche et y crée un widget par variable, selon
-        son type : curseur, interrupteur ou liste déroulante."""
+        son type : curseur, case de saisie, liste déroulante, choix de
+        rareté ou case à cocher."""
         zone_statistiques = ctk.CTkFrame(carte, fg_color="transparent")
         zone_statistiques.pack(fill="x", padx=20, pady=(16, 0))
+        zone_champs = ctk.CTkFrame(carte, fg_color="transparent")
+        zone_champs.pack(fill="x", padx=20, pady=(16, 0))
         zone_types = ctk.CTkFrame(carte, fg_color="transparent")
         zone_types.pack(fill="x", padx=20, pady=(16, 0))
-        zone_interrupteurs = ctk.CTkFrame(carte, fg_color="transparent")
-        zone_interrupteurs.pack(fill="x", padx=20, pady=(16, 0))
+        zone_rarete = ctk.CTkFrame(carte, fg_color="transparent")
+        zone_rarete.pack(fill="x", padx=20, pady=(16, 0))
 
         cible = self._modele.metadonnees["cible"]
         self._ligne_pv = LigneResultat(zone_statistiques, cible["libelle"],
                                        cible["max"])
         self._ligne_pv.pack(fill="x")
 
-        self._lignes: dict[str, LigneStatistique] = {}
+        self._lignes: dict[str, LigneStatistique | ChampSimple] = {}
         self._selecteurs: dict[str, SelecteurType] = {}
-        self._interrupteurs: dict[str, ctk.CTkSwitch] = {}
         for variable in self._variables:
-            if isinstance(variable, VariableNumerique):
+            if isinstance(variable, VariableNumerique) and variable.statistique:
                 ligne = LigneStatistique(zone_statistiques, variable,
                                          self._sur_changement)
                 ligne.pack(fill="x")
                 self._lignes[variable.nom] = ligne
+            elif isinstance(variable, VariableNumerique):
+                champ = ChampSimple(zone_champs, variable, self._sur_changement)
+                champ.pack(side="left", padx=(0, 20))
+                self._lignes[variable.nom] = champ
             elif isinstance(variable.defaut, bool):
-                self._construire_interrupteur(zone_interrupteurs, variable)
+                self._construire_case_a_cocher(zone_rarete, variable)
+            elif variable.nom == NOM_RARETE:
+                self._construire_rarete(zone_rarete, variable)
             else:
                 selecteur = SelecteurType(zone_types, variable,
                                           self._sur_changement)
                 selecteur.pack(side="left", padx=(0, 20))
                 self._selecteurs[variable.nom] = selecteur
         self._construire_actions(carte)
+
+    def _construire_rarete(self, zone: ctk.CTkFrame,
+                           variable: VariableCategorielle) -> None:
+        """Reçoit la zone du bas et la variable de rareté ; y place un bouton
+        à plusieurs choix (Aucune, Sous-légendaire, Légendaire, Fabuleux)."""
+        self._variable_rarete = variable
+        bloc = ctk.CTkFrame(zone, fg_color="transparent")
+        bloc.pack(side="left", padx=(0, 24))
+        etiquette = ctk.CTkLabel(bloc, text=variable.libelle, anchor="w",
+                                 height=18,
+                                 text_color=apparence.COULEUR_TEXTE_SECONDAIRE,
+                                 font=ctk.CTkFont(size=13))
+        etiquette.pack(fill="x", pady=(0, 6))
+        self._choix_rarete = ctk.CTkSegmentedButton(
+            bloc, values=variable.valeurs, height=40,
+            fg_color=apparence.COULEUR_FOND_ONGLETS,
+            selected_color=apparence.COULEUR_BOUTON_PRINCIPAL,
+            selected_hover_color=apparence.COULEUR_ACCENT,
+            unselected_color=apparence.COULEUR_FOND_ONGLETS,
+            unselected_hover_color=apparence.COULEUR_SEPARATEUR,
+            text_color=apparence.COULEUR_TEXTE, font=ctk.CTkFont(size=14),
+            command=lambda choix: self._sur_changement())
+        self._choix_rarete.pack(anchor="w")
+        self._choix_rarete.set(variable.defaut)
+
+    def _construire_case_a_cocher(self, zone: ctk.CTkFrame,
+                                  variable: VariableCategorielle) -> None:
+        """Reçoit la zone du bas et la variable oui/non (forme finale) ; y
+        place une case à cocher, décochée par défaut."""
+        self._variable_forme_finale = variable
+        self._case_forme_finale = ctk.CTkCheckBox(
+            zone, text=variable.libelle, checkbox_width=26, checkbox_height=26,
+            fg_color=apparence.COULEUR_BOUTON_PRINCIPAL,
+            hover_color=apparence.COULEUR_ACCENT,
+            border_color=apparence.COULEUR_TEXTE_SECONDAIRE,
+            text_color=apparence.COULEUR_TEXTE,
+            text_color_disabled=apparence.COULEUR_TEXTE_SECONDAIRE,
+            font=ctk.CTkFont(size=15), command=self._sur_changement)
+        self._case_forme_finale.pack(side="left", pady=(24, 0))
 
     def _construire_actions(self, carte: ctk.CTkFrame) -> None:
         """Reçoit la carte de gauche et y ajoute, sous la saisie : la zone
@@ -645,8 +739,9 @@ class Application(ctk.CTk):
             saisies[nom] = ligne.lire()
         for nom, selecteur in self._selecteurs.items():
             saisies[nom] = selecteur.lire()
-        for nom, interrupteur in self._interrupteurs.items():
-            saisies[nom] = interrupteur.get() == 1
+        saisies[self._variable_rarete.nom] = self._choix_rarete.get()
+        saisies[self._variable_forme_finale.nom] = (
+            self._case_forme_finale.get() == 1)
         return saisies
 
     def _valider_saisies(self, saisies: dict) -> tuple[dict, list[str]]:
@@ -711,9 +806,9 @@ class Application(ctk.CTk):
             ligne.reinitialiser()
         for selecteur in self._selecteurs.values():
             selecteur.reinitialiser()
-        for interrupteur in self._interrupteurs.values():
-            interrupteur.deselect()
-            interrupteur.configure(text="Non")
+        self._choix_rarete.set(self._variable_rarete.defaut)
+        self._case_forme_finale.configure(state="normal")
+        self._case_forme_finale.deselect()
         self._ligne_pv.vider()
         self._tracer_radar(None)
         self._distribution.tracer(None)
@@ -721,47 +816,32 @@ class Application(ctk.CTk):
         self._afficher_message("")
         self._encadre_resultat.pack_forget()
 
-    def _construire_interrupteur(self, zone: ctk.CTkFrame,
-                                 variable: VariableCategorielle) -> None:
-        """Reçoit la zone des interrupteurs et une variable oui/non ; y ajoute
-        la question et son interrupteur (désactivé par défaut), sur une
-        grille de deux colonnes."""
-        numero = len(self._interrupteurs)
-        ligne, colonne = numero // 2, numero % 2
-        case = ctk.CTkFrame(zone, fg_color="transparent")
-        case.grid(row=ligne, column=colonne, sticky="w", padx=(0, 24), pady=4)
-        question = ctk.CTkLabel(case, text=variable.libelle + " ?", width=140,
-                                anchor="w", text_color=apparence.COULEUR_TEXTE,
-                                font=ctk.CTkFont(size=15, weight="bold"))
-        question.pack(side="left", padx=(0, 8))
-        # La lambda retient le nom de CETTE variable : chaque interrupteur
-        # appelle _sur_interrupteur avec son propre nom.
-        interrupteur = ctk.CTkSwitch(
-            case, text="Non", switch_width=52, switch_height=28,
-            fg_color=apparence.COULEUR_BORDURE,
-            progress_color=apparence.COULEUR_INTERRUPTEUR_ACTIF,
-            button_color=apparence.COULEUR_CARTE,
-            button_hover_color=apparence.COULEUR_SEPARATEUR,
-            text_color=apparence.COULEUR_TEXTE_SECONDAIRE,
-            font=ctk.CTkFont(size=14),
-            command=lambda nom=variable.nom: self._sur_interrupteur(nom))
-        interrupteur.pack(side="left")
-        self._interrupteurs[variable.nom] = interrupteur
-
-    def _sur_interrupteur(self, nom: str) -> None:
-        """Reçoit le nom de l'interrupteur basculé et met à jour son texte
-        « Oui » / « Non »."""
-        interrupteur = self._interrupteurs[nom]
-        if interrupteur.get() == 1:
-            interrupteur.configure(text="Oui")
-        else:
-            interrupteur.configure(text="Non")
-        self._sur_changement()
+    def _imposer_forme_finale(self) -> None:
+        """Coche et bloque la case « Forme finale » si le stade d'évolution
+        saisi est le dernier possible ; sinon la case redevient modifiable.
+        La règle elle-même est dans logique/modele.py."""
+        variable_stade = self._variables_par_nom.get(COLONNE_STADE)
+        if variable_stade is None:
+            return
+        try:
+            stade = variable_stade.valider(self._lignes[COLONNE_STADE].lire())
+        except DonneeInvalideError:
+            return  # stade mal saisi : l'erreur s'affichera au clic sur Prédire
+        if forme_finale_imposee(stade, variable_stade.maximum):
+            self._case_forme_finale.select()
+            self._case_forme_finale.configure(state="disabled")
+        elif self._case_forme_finale.cget("state") == "disabled":
+            # On quitte le dernier stade : la case avait été cochée par la
+            # règle, on la décoche et on la rend de nouveau modifiable.
+            self._case_forme_finale.configure(state="normal")
+            self._case_forme_finale.deselect()
 
     def _sur_changement(self) -> None:
-        """Appelée quand une saisie change (curseur, champ, type, interrupteur).
-        Redessine le radar, sans le sommet PV qui n'est plus à jour. S'il y
-        avait une prédiction à l'écran, elle passe à l'état « périmé »."""
+        """Appelée quand une saisie change (curseur, case, type, rareté...).
+        Applique la règle du dernier stade, redessine le radar sans le sommet
+        PV qui n'est plus à jour, et passe une prédiction affichée à l'état
+        « périmé »."""
+        self._imposer_forme_finale()
         self._tracer_radar(None)
         if self._prediction_affichee:
             self._ligne_pv.griser()

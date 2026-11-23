@@ -63,7 +63,7 @@ class Historique:
                 redacteur.writerow(ligne)
         except OSError:
             raise HistoriqueInaccessibleError(
-                "Impossible d'enregistrer la prédiction dans l'historique."
+                "Could not save the prediction to the history."
             ) from None
 
     def lire(self) -> list[dict]:
@@ -83,10 +83,10 @@ class Historique:
                 lignes = list(lecteur)
         except (OSError, UnicodeDecodeError, csv.Error):
             raise HistoriqueInaccessibleError(
-                "Le fichier d'historique est illisible.") from None
+                "The history file cannot be read.") from None
         if entete != self._colonnes:
             raise HistoriqueInaccessibleError(
-                "Le fichier d'historique n'a pas les colonnes attendues.")
+                "The history file does not have the expected columns.")
 
         # On inverse d'abord l'ordre du fichier : si deux prédictions ont
         # exactement la même date, la dernière écrite reste ainsi devant.

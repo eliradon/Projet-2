@@ -7,14 +7,14 @@ from logique.exceptions import DonneeInvalideError, ModeleIntrouvableError
 
 def test_donnee_invalide_conserve_son_message() -> None:
     """Le message donné à l'exception est celui qu'on retrouve en l'affichant."""
-    erreur = DonneeInvalideError("Attaque : entrez une valeur.")
-    assert str(erreur) == "Attaque : entrez une valeur."
+    erreur = DonneeInvalideError("Attack: enter a value.")
+    assert str(erreur) == "Attack: enter a value."
 
 
 def test_donnee_invalide_se_leve_avec_raise() -> None:
     """On peut lever l'exception avec raise et l'attraper précisément."""
     with pytest.raises(DonneeInvalideError):
-        raise DonneeInvalideError("Attaque : entrez une valeur.")
+        raise DonneeInvalideError("Attack: enter a value.")
 
 
 def test_donnee_invalide_est_une_value_error() -> None:

@@ -30,14 +30,14 @@ FICHIERS_NECESSAIRES = ["pokemon_utf8.csv", "predicteur.py"]
 
 # Colonnes numériques du modèle, dans l'ordre d'affichage, avec leur libellé.
 LIBELLES_NUMERIQUES = {
-    "attack": "Attaque",
-    "defense": "Défense",
-    "sp_attack": "Att. Spé.",
-    "sp_defense": "Déf. Spé.",
-    "speed": "Vitesse",
-    "weight_kg": "Poids (kg)",
-    "height_m": "Taille (m)",
-    "evostage": "Stade d'évolution",
+    "attack": "Attack",
+    "defense": "Defense",
+    "sp_attack": "Sp. Atk",
+    "sp_defense": "Sp. Def",
+    "speed": "Speed",
+    "weight_kg": "Weight (kg)",
+    "height_m": "Height (m)",
+    "evostage": "Evolution stage",
 }
 # Les cinq statistiques de combat : elles se règlent avec un curseur, sont
 # montrées sur le radar et leur barre change de couleur selon la valeur.
@@ -51,16 +51,16 @@ PAS_DECIMAL = 0.1
 # Colonne oui/non du modèle (0 ou 1), avec son libellé : une case à cocher.
 COLONNE_STADE = "evostage"
 COLONNE_FORME_FINALE = "is_final_stage"
-LIBELLES_BOOLEENS = {COLONNE_FORME_FINALE: "Forme finale"}
+LIBELLES_BOOLEENS = {COLONNE_FORME_FINALE: "Final evolution"}
 
-# Rareté : un seul choix parmi quatre. Chaque choix (sauf « Aucune »)
+# Rareté : un seul choix parmi quatre. Chaque choix (sauf « None »)
 # correspond à une colonne 0/1 du modèle ; un Pokémon n'en a jamais deux.
-NOM_RARETE = "Rareté"
-RARETE_AUCUNE = "Aucune"
+NOM_RARETE = "Rarity"
+RARETE_AUCUNE = "None"
 COLONNES_RARETE = {
-    "Sous-légendaire": "is_sublegendary",
-    "Légendaire": "is_legendary",
-    "Fabuleux": "is_mythical",
+    "Sub-legendary": "is_sublegendary",
+    "Legendary": "is_legendary",
+    "Mythical": "is_mythical",
 }
 COLONNE_CIBLE = "hp"
 LARGEUR_CLASSE_HISTOGRAMME = 20
@@ -146,7 +146,7 @@ def construire_metadonnees(entrees: pd.DataFrame, cible: pd.Series,
     effectifs, bornes = np.histogram(pv, bins=bornes_classes)
 
     return {
-        "cible": {"nom": COLONNE_CIBLE, "libelle": "PV",
+        "cible": {"nom": COLONNE_CIBLE, "libelle": "HP",
                   "min": int(pv.min()), "max": int(pv.max())},
         "variables": variables,
         "colonnes_modele": list(colonnes_modele),
@@ -186,12 +186,12 @@ def sauvegarder_modele(dossier: str = DOSSIER_MODELES) -> None:
     for nom_fichier in FICHIERS_NECESSAIRES:
         if not os.path.exists(os.path.join(DOSSIER_PROJET, nom_fichier)):
             raise ModeleIntrouvableError(
-                f"Le fichier « {nom_fichier} » est introuvable.")
+                f"The file \"{nom_fichier}\" was not found.")
     try:
         import predicteur  # exécute tout le script : lecture, entraînement
     except (ImportError, OSError):
         raise ModeleIntrouvableError(
-            "Le modèle n'a pas pu être entraîné à partir de predicteur.py."
+            "The model could not be trained from predicteur.py."
         ) from None
 
     # L'ordre des colonnes change à chaque entraînement : on le lit dans le
@@ -208,7 +208,7 @@ def sauvegarder_modele(dossier: str = DOSSIER_MODELES) -> None:
             json.dump(metadonnees, fichier, ensure_ascii=False, indent=2)
     except OSError:
         raise ModeleIntrouvableError(
-            "Le modèle n'a pas pu être enregistré sur le disque.") from None
+            "The model could not be saved to disk.") from None
 
 
 class Modele:
@@ -226,7 +226,7 @@ class Modele:
         """Renvoie le dictionnaire de métadonnées.
         Échoue avec ModeleIntrouvableError si charger() n'a pas été appelée."""
         if self._metadonnees is None:
-            raise ModeleIntrouvableError("Le modèle n'est pas chargé.")
+            raise ModeleIntrouvableError("The model is not loaded.")
         return self._metadonnees
 
     def charger(self) -> None:
@@ -246,8 +246,8 @@ class Modele:
                 self._metadonnees = json.load(fichier)
         except ERREURS_DE_LECTURE:
             raise ModeleIntrouvableError(
-                "Les fichiers du modèle sont illisibles. Supprimez le "
-                "dossier « modeles » puis relancez l'application.") from None
+                "The model files cannot be read. Delete the "
+                "\"modeles\" folder and restart the application.") from None
 
     def _types_connus(self) -> list[str]:
         """Renvoie la liste des types (en anglais) connus du modèle."""
@@ -265,8 +265,8 @@ class Modele:
 
     def predire(self, valeurs: dict) -> float:
         """Reçoit les valeurs validées, par nom de colonne du CSV (ex.
-        {"attack": 50, ..., "Type 1": "fire", "Type 2": "Aucun",
-        "Rareté": "Aucune", "is_final_stage": False}) et renvoie les PV
+        {"attack": 50, ..., "Type 1": "fire", "Type 2": "None",
+        "Rarity": "None", "is_final_stage": False}) et renvoie les PV
         prédits. Au dernier stade d'évolution, la forme finale est imposée.
 
         Échoue avec ModeleIntrouvableError si le modèle n'est pas chargé et
@@ -274,7 +274,7 @@ class Modele:
         """
         types = self._types_connus()
         colonnes_rarete = self.metadonnees["rarete"]
-        # La colonne de la rareté choisie (None pour « Aucune »).
+        # La colonne de la rareté choisie (None pour « None »).
         colonne_rarete = colonnes_rarete.get(valeurs[NOM_RARETE])
         forme_finale = valeurs[COLONNE_FORME_FINALE] or forme_finale_imposee(
             valeurs[COLONNE_STADE], self._stade_maximum())

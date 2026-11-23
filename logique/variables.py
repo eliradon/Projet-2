@@ -1,6 +1,6 @@
 """Variables d'entrée du modèle et validation des saisies.
 
-Chaque variable (Attaque, Type 1, Légendaire...) sait valider ce que
+Chaque variable (Attack, Type 1, Rarity...) sait valider ce que
 l'utilisateur a saisi. L'interface ne valide rien elle-même : elle appelle
 variable.valider(saisie) et affiche le message si une DonneeInvalideError
 est levée.
@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from logique.exceptions import DonneeInvalideError
 
 # Valeur du Type 2 quand le Pokémon n'a pas de second type.
-AUCUN_TYPE = "Aucun"
+AUCUN_TYPE = "None"
 
 
 class Variable(ABC):
@@ -22,8 +22,8 @@ class Variable(ABC):
     """
 
     def __init__(self, nom: str, libelle: str) -> None:
-        """Reçoit le nom de la colonne du CSV (ex. « Sp. Atk ») et le libellé
-        affiché à l'écran (ex. « Att. Spé. »). Ne renvoie rien, n'échoue pas."""
+        """Reçoit le nom de la colonne du CSV (ex. « sp_attack ») et le libellé
+        affiché à l'écran (ex. « Sp. Atk »). Ne renvoie rien, n'échoue pas."""
         self._nom = nom
         self._libelle = libelle
 
@@ -34,7 +34,7 @@ class Variable(ABC):
 
     @property
     def libelle(self) -> str:
-        """Renvoie le libellé français affiché à l'écran (lecture seule)."""
+        """Renvoie le libellé affiché à l'écran (lecture seule)."""
         return self._libelle
 
     @abstractmethod
@@ -88,7 +88,7 @@ class VariableNumerique(Variable):
 
     @property
     def statistique(self) -> bool:
-        """Renvoie True pour une statistique de combat (Attaque, Vitesse...)."""
+        """Renvoie True pour une statistique de combat (Attack, Speed...)."""
         return self._statistique
 
     def formater(self, valeur: float) -> str:
@@ -106,22 +106,22 @@ class VariableNumerique(Variable):
         """
         texte = str(saisie).strip()
         if texte == "":
-            raise DonneeInvalideError(f"{self._libelle} : entrez une valeur.")
+            raise DonneeInvalideError(f"{self._libelle}: enter a value.")
         try:
             valeur = float(texte)
         except ValueError:
             raise DonneeInvalideError(
-                f'{self._libelle} : "{texte}" n\'est pas un nombre.') from None
+                f'{self._libelle}: "{texte}" is not a number.') from None
         # Cette comparaison rejette aussi « nan » et « inf », que float() accepte.
         if not (self._minimum <= valeur <= self._maximum):
             raise DonneeInvalideError(
-                f"{self._libelle} : la valeur doit être entre "
-                f"{self._minimum} et {self._maximum}.")
+                f"{self._libelle}: the value must be between "
+                f"{self._minimum} and {self._maximum}.")
         return valeur
 
     def __str__(self) -> str:
-        """Renvoie le libellé suivi des bornes, ex. « Attaque (5 à 190) »."""
-        return f"{self._libelle} ({self._minimum} à {self._maximum})"
+        """Renvoie le libellé suivi des bornes, ex. « Attack (5 to 190) »."""
+        return f"{self._libelle} ({self._minimum} to {self._maximum})"
 
 
 class VariableCategorielle(Variable):
@@ -150,23 +150,23 @@ class VariableCategorielle(Variable):
         """
         if saisie not in self._valeurs:
             raise DonneeInvalideError(
-                f'{self._libelle} : "{saisie}" n\'est pas un type valide.')
+                f'{self._libelle}: "{saisie}" is not a valid choice.')
         return saisie
 
     def __str__(self) -> str:
-        """Renvoie le libellé et le nombre de choix, ex. « Type 1 (18 choix) »."""
-        return f"{self._libelle} ({len(self._valeurs)} choix)"
+        """Renvoie le libellé et le nombre de choix, ex. « Type 1 (18 choices) »."""
+        return f"{self._libelle} ({len(self._valeurs)} choices)"
 
 
 def verifier_types_differents(type_1: str, type_2: str) -> None:
     """Reçoit les deux types choisis et vérifie qu'ils sont différents.
 
     Ne renvoie rien. Échoue avec DonneeInvalideError si le type 2 est égal
-    au type 1 (« Aucun » est toujours accepté comme type 2).
+    au type 1 (« None » est toujours accepté comme type 2).
     """
     if type_2 != AUCUN_TYPE and type_2 == type_1:
         raise DonneeInvalideError(
-            f'Le type 2 doit être différent du type 1 (ou "{AUCUN_TYPE}").')
+            f'Type 2 must be different from Type 1 (or "{AUCUN_TYPE}").')
 
 
 def creer_variable(description: dict) -> Variable:

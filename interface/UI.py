@@ -25,13 +25,13 @@ from logique.variables import (AUCUN_TYPE, Variable, VariableCategorielle,
                        VariableNumerique, creer_variable,
                        verifier_types_differents)
 
-TITRE = "Prédicteur de PV — Pokémon"
-ONGLET_PREDICTION = "Prédiction"
-ONGLET_HISTORIQUE = "Historique"
+TITRE = "Pokémon HP Predictor"
+ONGLET_PREDICTION = "Prediction"
+ONGLET_HISTORIQUE = "History"
 MARGE = 20
 TEXTE_PV_VIDE = "—"
-MESSAGE_PERIME = "Cliquez sur Prédire pour mettre à jour"
-MESSAGE_HISTORIQUE_VIDE = "Aucune prédiction pour l'instant."
+MESSAGE_PERIME = "Click Predict to update"
+MESSAGE_HISTORIQUE_VIDE = "No predictions yet."
 # Axes du radar après les PV, dans le sens des aiguilles d'une montre.
 ORDRE_RADAR = ["attack", "defense", "speed", "sp_defense", "sp_attack"]
 LARGEUR_LIBELLE = 150
@@ -258,15 +258,15 @@ class SelecteurType(ctk.CTkFrame):
         super().__init__(parent, fg_color="transparent")
         self._variable = variable
         self._sur_changement = sur_changement
-        # Le menu affiche le nom français en majuscules ; ce dictionnaire
-        # permet de retrouver le nom anglais attendu par le modèle.
+        # Le menu affiche le type avec une majuscule (« Fire ») ; ce
+        # dictionnaire retrouve la valeur attendue par le modèle (« fire »).
         self._types_par_libelle = {
-            apparence.nom_type_fr(type_anglais).upper(): type_anglais
+            apparence.nom_type(type_anglais): type_anglais
             for type_anglais in variable.valeurs}
 
         titre = variable.libelle
         if AUCUN_TYPE in variable.valeurs:
-            titre = titre + " (optionnel)"
+            titre = titre + " (optional)"
         etiquette = ctk.CTkLabel(self, text=titre, anchor="w", height=18,
                                  text_color=apparence.COULEUR_TEXTE_SECONDAIRE,
                                  font=ctk.CTkFont(size=13))
@@ -349,21 +349,21 @@ class PanneauRadar:
         axes.set_xticklabels(self._libelles)
         axes.set_ylim(0, self._maximum)
         axes.set_yticklabels([])
-        axes.set_title("Profil du Pokémon", fontweight="bold")
+        axes.set_title("Pokémon profile", fontweight="bold")
 
         if pv is None:
             # Sans prédiction, le sommet PV n'est pas tracé : ligne ouverte.
             axes.plot(self._angles[1:], statistiques, linewidth=2.5,
-                      color=apparence.COULEUR_ACCENT, label="Saisie")
+                      color=apparence.COULEUR_ACCENT, label="Input")
         else:
             # On revient au premier point pour fermer le polygone.
             angles = self._angles + [self._angles[0]]
             rayons = [pv] + statistiques + [pv]
             axes.plot(angles, rayons, linewidth=2.5,
-                      color=apparence.COULEUR_ACCENT, label="Saisie")
+                      color=apparence.COULEUR_ACCENT, label="Input")
             axes.fill(angles, rayons, color=apparence.COULEUR_RADAR, alpha=0.35)
             axes.plot([self._angles[0]], [pv], "o", markersize=9,
-                      color=apparence.COULEUR_PREDICTION, label="PV prédits")
+                      color=apparence.COULEUR_PREDICTION, label="Predicted HP")
         axes.legend(loc="upper left", bbox_to_anchor=(1.15, 1.0))
         self._canevas.draw_idle()
 
@@ -393,16 +393,16 @@ class PanneauDistribution:
         # Chaque barre commence à sa borne gauche (align="edge").
         axes.bar(self._bornes[:-1], self._effectifs, width=largeur * 0.92,
                  align="edge", color=apparence.COULEUR_HISTOGRAMME,
-                 label="Jeu de données")
+                 label="Dataset")
         if pv is not None:
             axes.axvspan(pv - self._erreur_moyenne, pv + self._erreur_moyenne,
                          color=apparence.COULEUR_PREDICTION, alpha=0.12,
-                         label="± erreur moyenne")
+                         label="± mean error")
             axes.axvline(pv, linewidth=2.5, color=apparence.COULEUR_PREDICTION,
-                         label=f"PV prédits ({pv})")
-        axes.set_title("Où se situe la prédiction ?", fontweight="bold")
-        axes.set_xlabel("PV")
-        axes.set_ylabel("Nombre de Pokémon")
+                         label=f"Predicted HP ({pv})")
+        axes.set_title("Where does the prediction fall?", fontweight="bold")
+        axes.set_xlabel("HP")
+        axes.set_ylabel("Number of Pokémon")
         axes.set_xlim(self._bornes[0], self._bornes[-1])
         axes.spines["top"].set_visible(False)
         axes.spines["right"].set_visible(False)
@@ -425,14 +425,14 @@ class OngletHistorique(ctk.CTkFrame):
         haut = ctk.CTkFrame(self, fg_color="transparent")
         haut.pack(fill="x", padx=28, pady=(28, 16))
         bouton = ctk.CTkButton(
-            haut, text="Actualiser", height=44, width=120, corner_radius=10,
+            haut, text="Refresh", height=44, width=120, corner_radius=10,
             border_width=1, fg_color=apparence.COULEUR_CARTE,
             hover_color=apparence.COULEUR_FOND,
             border_color=apparence.COULEUR_TEXTE_SECONDAIRE,
             text_color=apparence.COULEUR_TEXTE, font=ctk.CTkFont(size=15),
             command=self.actualiser)
         bouton.pack(side="right")
-        titre = ctk.CTkLabel(haut, text="Prédictions enregistrées", anchor="w",
+        titre = ctk.CTkLabel(haut, text="Saved predictions", anchor="w",
                              text_color=apparence.COULEUR_TEXTE,
                              font=ctk.CTkFont(size=18, weight="bold"))
         titre.pack(fill="x")
@@ -488,8 +488,8 @@ class OngletHistorique(ctk.CTkFrame):
             self._tableau.insert("", "end", values=cases)
         pluriel = "s" if len(lignes) > 1 else ""
         self._sous_titre.configure(
-            text=f"{len(lignes)} prédiction{pluriel} · les plus récentes en "
-                 f"premier · fichier {os.path.basename(self._historique.chemin)}")
+            text=f"{len(lignes)} prediction{pluriel} · most recent first · "
+                 f"file {os.path.basename(self._historique.chemin)}")
         self._message.pack_forget()
         self._tableau.pack(fill="both", expand=True, padx=28, pady=(0, 28))
 
@@ -701,7 +701,7 @@ class Application(ctk.CTk):
         zone_boutons = ctk.CTkFrame(carte, fg_color="transparent")
         zone_boutons.pack(fill="x", padx=20)
         bouton_predire = ctk.CTkButton(
-            zone_boutons, text="Prédire", height=48, width=140,
+            zone_boutons, text="Predict", height=48, width=140,
             corner_radius=10, fg_color=apparence.COULEUR_BOUTON_PRINCIPAL,
             hover_color=apparence.COULEUR_ACCENT,
             text_color=apparence.COULEUR_TEXTE_CLAIR,
@@ -709,7 +709,7 @@ class Application(ctk.CTk):
             command=self._sur_predire)
         bouton_predire.pack(side="left", padx=(0, 12))
         bouton_reinitialiser = ctk.CTkButton(
-            zone_boutons, text="Réinitialiser", height=48, width=150,
+            zone_boutons, text="Reset", height=48, width=150,
             corner_radius=10, border_width=1,
             fg_color=apparence.COULEUR_CARTE,
             hover_color=apparence.COULEUR_FOND,
@@ -801,12 +801,12 @@ class Application(ctk.CTk):
         self._tracer_radar(pv)
         self._distribution.tracer(pv)
         self._phrase_resultat.configure(
-            text=f"Ce Pokémon aurait environ {pv} PV.")
+            text=f"This Pokémon would have about {pv} HP.")
         self._phrase_erreur_moyenne.configure(
-            text=f"Erreur moyenne du modèle : ± {erreur_moyenne} PV")
+            text=f"Model mean error: ± {erreur_moyenne} HP")
         self._phrase_r2.configure(
-            text=f"Score R² du modèle : {apparence.formater_r2(metrique['r2'])}"
-                 " (1 = parfait, 0 = pas mieux que la moyenne)")
+            text=f"Model R² score: {apparence.formater_r2(metrique['r2'])}"
+                 " (1 = perfect, 0 = no better than the mean)")
         self._encadre_resultat.pack(fill="x", padx=20, pady=(16, 20))
 
     def _reinitialiser(self) -> None:
@@ -872,13 +872,13 @@ class Application(ctk.CTk):
         """Reçoit le cadre de l'onglet Historique et y place le tableau,
         avec une colonne par variable des métadonnées."""
         cible = self._modele.metadonnees["cible"]
-        entetes = {COLONNE_DATE: "Date et heure"}
+        entetes = {COLONNE_DATE: "Date and time"}
         colonnes_numeriques = [cible["nom"]]
         for variable in self._variables:
             entetes[variable.nom] = variable.libelle
             if isinstance(variable, VariableNumerique):
                 colonnes_numeriques.append(variable.nom)
-        entetes[cible["nom"]] = cible["libelle"] + " prédits"
+        entetes[cible["nom"]] = "Predicted " + cible["libelle"]
         self._onglet_historique = OngletHistorique(
             onglet, self._historique, entetes, colonnes_numeriques)
         self._onglet_historique.pack(fill="both", expand=True)

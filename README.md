@@ -22,13 +22,16 @@ Sur Mac avec le Python de Homebrew, tkinter s'installe à part :
 
 ## Utiliser l'application
 
-- **Onglet Prédiction** : réglez les cinq statistiques (curseur ou champ),
+L'interface est en anglais.
+
+- **Onglet Prediction** : réglez les cinq statistiques (curseur ou champ),
   saisissez le poids, la taille et le stade d'évolution (1 à 4), choisissez
-  les types, la rareté (Aucune, Sous-légendaire, Légendaire, Fabuleux) et la
-  case « Forme finale », puis cliquez sur **Prédire**. Au stade 4, la case
-  « Forme finale » est cochée d'office. Les PV estimés s'affichent avec l'erreur moyenne du modèle,
-  et les deux graphiques se mettent à jour.
-- **Onglet Historique** : le tableau des prédictions enregistrées dans
+  les types, la rareté (None, Sub-legendary, Legendary, Mythical) et la case
+  « Final evolution », puis cliquez sur **Predict**. Au stade 4, la case
+  « Final evolution » est cochée d'office. Les PV estimés s'affichent avec
+  l'erreur moyenne et le score R² du modèle, et les deux graphiques se
+  mettent à jour.
+- **Onglet History** : le tableau des prédictions enregistrées dans
   `historique.csv`, les plus récentes en premier.
 - Une saisie vide, non numérique ou hors intervalle affiche un message en
   rouge ; l'application ne plante pas.
@@ -49,7 +52,7 @@ Projet-2/
 │   └── modele.py        sauvegarde, chargement et prédiction du modèle
 ├── interface/           tout ce qui concerne l'affichage
 │   ├── UI.py            la fenêtre et ses widgets (CustomTkinter)
-│   └── apparence.py     couleurs, noms français des types, mise en forme
+│   └── apparence.py     couleurs et mise en forme des textes
 ├── tests/               tests pytest de la logique
 ├── docs/                plan de l'interface et maquettes
 ├── modeles/             modèle et métadonnées (générés au premier lancement)

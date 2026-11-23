@@ -4,9 +4,9 @@ import os
 
 import pytest
 
-from interface.apparence import (COULEUR_MENU_TYPE, COULEURS_TYPES, NOMS_TYPES_FR,
+from interface.apparence import (COULEUR_MENU_TYPE, COULEURS_TYPES,
                        chemin_image_type, couleur_pour_valeur, couleur_type,
-                       formater_cellule, formater_r2, nom_type_fr)
+                       formater_cellule, formater_r2, nom_type)
 
 
 # Chaque ligne teste les deux côtés d'un seuil : la couleur doit changer
@@ -32,23 +32,24 @@ def test_couleur_valeur_decimale() -> None:
     assert couleur_pour_valeur(29.9) == "#F34444"
 
 
-def test_nom_type_fr() -> None:
-    assert nom_type_fr("Fire") == "Feu"
-    assert nom_type_fr("Electric") == "Électrik"
+def test_nom_type_avec_majuscule() -> None:
+    """Le jeu de données écrit les types en minuscules (« fire »)."""
+    assert nom_type("fire") == "Fire"
+    assert nom_type("Fire") == "Fire"
 
 
-def test_nom_type_inconnu_renvoye_tel_quel() -> None:
-    assert nom_type_fr("Aucun") == "Aucun"
+def test_nom_type_none_renvoye_tel_quel() -> None:
+    assert nom_type("None") == "None"
 
 
 def test_couleur_type() -> None:
     assert couleur_type("Fire") == "#E62829"
-    assert couleur_type("Aucun") == COULEUR_MENU_TYPE
+    assert couleur_type("fire") == "#E62829"
+    assert couleur_type("None") == COULEUR_MENU_TYPE
 
 
-def test_dictionnaires_couvrent_les_memes_18_types() -> None:
-    assert len(NOMS_TYPES_FR) == 18
-    assert set(NOMS_TYPES_FR) == set(COULEURS_TYPES)
+def test_couleurs_des_18_types() -> None:
+    assert len(COULEURS_TYPES) == 18
 
 
 def test_image_de_type_absente(tmp_path) -> None:
@@ -63,8 +64,8 @@ def test_image_de_type_presente(tmp_path) -> None:
 
 
 @pytest.mark.parametrize("texte, attendu", [
-    ("True", "Oui"), ("False", "Non"),
-    ("Fire", "Feu"), ("Aucun", "Aucun"),
+    ("True", "Yes"), ("False", "No"),
+    ("fire", "Fire"), ("None", "None"),
     ("50.0", "50"), ("78", "78"), ("12.5", "12.5"),
     ("2026-11-12 18:04:00", "2026-11-12 18:04:00"), ("", ""),
 ])
@@ -72,15 +73,8 @@ def test_formater_cellule(texte: str, attendu: str) -> None:
     assert formater_cellule(texte) == attendu
 
 
-def test_types_en_minuscules() -> None:
-    """Le nouveau jeu de données écrit les types en minuscules (« fire »)."""
-    assert nom_type_fr("fire") == "Feu"
-    assert couleur_type("fire") == "#E62829"
-    assert formater_cellule("water") == "Eau"
-
-
 @pytest.mark.parametrize("r2, attendu", [
-    (0.4573, "0,46"), (0.0, "0,00"), (1.0, "1,00"), (-0.0021, "-0,00"),
+    (0.4573, "0.46"), (0.0, "0.00"), (1.0, "1.00"), (-0.0021, "-0.00"),
 ])
 def test_formater_r2(r2: float, attendu: str) -> None:
     assert formater_r2(r2) == attendu

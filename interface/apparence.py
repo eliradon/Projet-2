@@ -1,4 +1,4 @@
-"""Couleurs et libellés de l'interface.
+"""Couleurs et mise en forme des textes de l'interface.
 
 Tout ce qui concerne l'apparence est regroupé ici : l'interface n'a ainsi
 aucun code hexadécimal écrit directement dans ses widgets, et les règles
@@ -44,29 +44,8 @@ SEUILS_COULEURS = [
 ]
 COULEUR_VALEUR_BASSE = "#F34444"  # rouge : en dessous de 30
 
-# --- Types de Pokémon : nom français et couleur ---
-# Les clés sont les noms anglais du CSV : ce sont eux qu'on envoie au modèle.
-NOMS_TYPES_FR = {
-    "Bug": "Insecte",
-    "Dark": "Ténèbres",
-    "Dragon": "Dragon",
-    "Electric": "Électrik",
-    "Fairy": "Fée",
-    "Fighting": "Combat",
-    "Fire": "Feu",
-    "Flying": "Vol",
-    "Ghost": "Spectre",
-    "Grass": "Plante",
-    "Ground": "Sol",
-    "Ice": "Glace",
-    "Normal": "Normal",
-    "Poison": "Poison",
-    "Psychic": "Psy",
-    "Rock": "Roche",
-    "Steel": "Acier",
-    "Water": "Eau",
-}
-
+# --- Types de Pokémon : couleur de la pastille ---
+# Les clés sont les noms anglais des types, avec une majuscule (« Fire »).
 COULEURS_TYPES = {
     "Bug": "#91A119",
     "Dark": "#624D4E",
@@ -98,17 +77,16 @@ def couleur_pour_valeur(valeur: float) -> str:
     return COULEUR_VALEUR_BASSE
 
 
-def nom_type_fr(type_anglais: str) -> str:
-    """Reçoit un type en anglais, en minuscules ou non (ex. « fire »), et
-    renvoie son nom français (« Feu »). N'échoue pas : un type inconnu
-    (ou « Aucun ») est renvoyé tel quel."""
+def nom_type(type_anglais: str) -> str:
+    """Reçoit un type tel qu'écrit dans le jeu de données (« fire ») et
+    renvoie le nom à afficher, avec une majuscule (« Fire »). N'échoue pas."""
     # capitalize() met la première lettre en majuscule : « fire » → « Fire ».
-    return NOMS_TYPES_FR.get(type_anglais.capitalize(), type_anglais)
+    return type_anglais.capitalize()
 
 
 def couleur_type(type_anglais: str) -> str:
     """Reçoit un type en anglais, en minuscules ou non, et renvoie la couleur
-    de sa pastille. N'échoue pas : un type inconnu (ou « Aucun ») donne la
+    de sa pastille. N'échoue pas : un type inconnu (ou « None ») donne la
     couleur neutre du menu."""
     return COULEURS_TYPES.get(type_anglais.capitalize(), COULEUR_MENU_TYPE)
 
@@ -126,15 +104,15 @@ def chemin_image_type(type_anglais: str,
 
 def formater_cellule(texte: str) -> str:
     """Reçoit le texte d'une case de l'historique (tel qu'écrit dans le CSV)
-    et renvoie le texte à afficher : « True » devient « Oui », « Fire »
-    devient « Feu », « 50.0 » devient « 50 ». N'échoue pas : un texte
+    et renvoie le texte à afficher : « True » devient « Yes », « fire »
+    devient « Fire », « 50.0 » devient « 50 ». N'échoue pas : un texte
     non reconnu est renvoyé tel quel."""
     if texte == "True":
-        return "Oui"
+        return "Yes"
     if texte == "False":
-        return "Non"
-    if texte.capitalize() in NOMS_TYPES_FR:
-        return NOMS_TYPES_FR[texte.capitalize()]
+        return "No"
+    if texte.capitalize() in COULEURS_TYPES:
+        return nom_type(texte)
     try:
         nombre = float(texte)
     except ValueError:
@@ -146,6 +124,5 @@ def formater_cellule(texte: str) -> str:
 
 def formater_r2(r2: float) -> str:
     """Reçoit le score R² du modèle et renvoie le texte à afficher, avec
-    deux décimales et une virgule à la française (0.4573 → « 0,46 »).
-    N'échoue pas."""
-    return f"{r2:.2f}".replace(".", ",")
+    deux décimales (0.4573 → « 0.46 »). N'échoue pas."""
+    return f"{r2:.2f}"

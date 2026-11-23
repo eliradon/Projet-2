@@ -11,7 +11,7 @@ from logique.variables import (AUCUN_TYPE, Variable, VariableCategorielle,
 @pytest.fixture
 def attaque() -> VariableNumerique:
     """Une variable numérique d'exemple, réutilisée par plusieurs tests."""
-    return VariableNumerique("Attack", "Attaque", 5, 190, 75)
+    return VariableNumerique("Attack", "Attack", 5, 190, 75)
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ def test_numerique_accepte_les_deux_bornes(attaque: VariableNumerique) -> None:
 def test_numerique_hors_bornes(attaque: VariableNumerique, saisie: str) -> None:
     with pytest.raises(DonneeInvalideError) as info:
         attaque.valider(saisie)
-    assert str(info.value) == "Attaque : la valeur doit être entre 5 et 190."
+    assert str(info.value) == "Attack: the value must be between 5 and 190."
 
 
 # --- VariableNumerique : cas d'erreur ---
@@ -50,13 +50,13 @@ def test_numerique_hors_bornes(attaque: VariableNumerique, saisie: str) -> None:
 def test_numerique_vide(attaque: VariableNumerique, saisie: str) -> None:
     with pytest.raises(DonneeInvalideError) as info:
         attaque.valider(saisie)
-    assert str(info.value) == "Attaque : entrez une valeur."
+    assert str(info.value) == "Attack: enter a value."
 
 
 def test_numerique_non_numerique(attaque: VariableNumerique) -> None:
     with pytest.raises(DonneeInvalideError) as info:
         attaque.valider("abc")
-    assert str(info.value) == 'Attaque : "abc" n\'est pas un nombre.'
+    assert str(info.value) == 'Attack: "abc" is not a number.'
 
 
 # --- VariableCategorielle ---
@@ -68,11 +68,11 @@ def test_categorielle_valeur_valide(type_1: VariableCategorielle) -> None:
 def test_categorielle_type_inconnu(type_1: VariableCategorielle) -> None:
     with pytest.raises(DonneeInvalideError) as info:
         type_1.valider("xyz")
-    assert str(info.value) == 'Type 1 : "xyz" n\'est pas un type valide.'
+    assert str(info.value) == 'Type 1: "xyz" is not a valid choice.'
 
 
 def test_categorielle_booleenne() -> None:
-    legendaire = VariableCategorielle("Legendary", "Légendaire", [False, True])
+    legendaire = VariableCategorielle("Legendary", "Legendary", [False, True])
     assert legendaire.valider(True) is True
     assert legendaire.defaut is False
 
@@ -88,23 +88,23 @@ def test_types_identiques_refuses() -> None:
     with pytest.raises(DonneeInvalideError) as info:
         verifier_types_differents("Fire", "Fire")
     assert str(info.value) == (
-        'Le type 2 doit être différent du type 1 (ou "Aucun").')
+        'Type 2 must be different from Type 1 (or "None").')
 
 
 # --- Classe abstraite, __str__ et création depuis les métadonnées ---
 
 def test_variable_est_abstraite() -> None:
     with pytest.raises(TypeError):
-        Variable("Attack", "Attaque")
+        Variable("Attack", "Attack")
 
 
 def test_str(attaque: VariableNumerique, type_1: VariableCategorielle) -> None:
-    assert str(attaque) == "Attaque (5 à 190)"
-    assert str(type_1) == "Type 1 (3 choix)"
+    assert str(attaque) == "Attack (5 to 190)"
+    assert str(type_1) == "Type 1 (3 choices)"
 
 
 def test_creer_variable_numerique() -> None:
-    variable = creer_variable({"nom": "Attack", "libelle": "Attaque",
+    variable = creer_variable({"nom": "Attack", "libelle": "Attack",
                                "type": "numerique", "min": 5, "max": 190,
                                "defaut": 75})
     assert isinstance(variable, VariableNumerique)
@@ -127,7 +127,7 @@ def test_creer_variable_type_inconnu() -> None:
 # --- Variable décimale (poids, taille) ---
 
 def test_numerique_decimale() -> None:
-    taille = VariableNumerique("height_m", "Taille (m)", 0.1, 20.0, 1.0,
+    taille = VariableNumerique("height_m", "Height (m)", 0.1, 20.0, 1.0,
                                pas=0.1, statistique=False)
     assert taille.valider("1.5") == pytest.approx(1.5)
     assert taille.formater(1.5) == "1.5"
@@ -140,7 +140,7 @@ def test_numerique_entiere_formatee_sans_decimale(attaque: VariableNumerique) ->
 
 
 def test_creer_variable_avec_pas() -> None:
-    variable = creer_variable({"nom": "weight_kg", "libelle": "Poids (kg)",
+    variable = creer_variable({"nom": "weight_kg", "libelle": "Weight (kg)",
                                "type": "numerique", "min": 0.1, "max": 999.9,
                                "defaut": 28.0, "pas": 0.1,
                                "statistique": False})

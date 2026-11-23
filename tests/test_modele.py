@@ -106,7 +106,7 @@ def test_types_dans_les_metadonnees(modele: Modele) -> None:
     for nom in LIBELLES_BOOLEENS:
         assert variables[nom]["valeurs"] == [False, True]
     assert variables[NOM_RARETE]["valeurs"] == [
-        "Aucune", "Sous-légendaire", "Légendaire", "Fabuleux"]
+        "None", "Sub-legendary", "Legendary", "Mythical"]
 
 
 def test_metriques(modele: Modele, predicteur) -> None:
@@ -215,7 +215,7 @@ def test_arrondir_pv_jamais_sous_le_minimum() -> None:
 def test_rarete_change_la_prediction(modele: Modele) -> None:
     valeurs = exemple_feu_vol()
     sans_rarete = modele.predire(valeurs)
-    valeurs[NOM_RARETE] = "Légendaire"
+    valeurs[NOM_RARETE] = "Legendary"
     assert modele.predire(valeurs) != pytest.approx(sans_rarete)
 
 

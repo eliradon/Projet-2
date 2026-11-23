@@ -525,7 +525,7 @@ class Application(ctk.CTk):
         self._prediction_affichee = False
 
         self.title(TITRE)
-        self.geometry("1280x860")
+        self.geometry("1280x940")  # assez haut pour voir le résultat sans défiler
         # La carte de saisie défile : la fenêtre peut être plus petite.
         self.minsize(1100, 700)
         self._construire()
@@ -730,7 +730,12 @@ class Application(ctk.CTk):
             self._encadre_resultat, text="", anchor="w",
             text_color=apparence.COULEUR_TEXTE_SECONDAIRE,
             font=ctk.CTkFont(size=14))
-        self._phrase_erreur_moyenne.pack(fill="x", padx=20, pady=(0, 14))
+        self._phrase_erreur_moyenne.pack(fill="x", padx=20)
+        self._phrase_r2 = ctk.CTkLabel(
+            self._encadre_resultat, text="", anchor="w",
+            text_color=apparence.COULEUR_TEXTE_SECONDAIRE,
+            font=ctk.CTkFont(size=14))
+        self._phrase_r2.pack(fill="x", padx=20, pady=(0, 14))
 
     def _lire_saisies(self) -> dict:
         """Renvoie les saisies brutes, non validées : {nom de variable: saisie}."""
@@ -789,7 +794,8 @@ class Application(ctk.CTk):
 
     def _afficher_resultat(self, pv: int) -> None:
         """Reçoit les PV prédits ; met à jour la ligne PV et la phrase."""
-        erreur_moyenne = round(self._modele.metadonnees["metrique"]["valeur"])
+        metrique = self._modele.metadonnees["metrique"]
+        erreur_moyenne = round(metrique["valeur"])
         self._prediction_affichee = True
         self._ligne_pv.afficher(pv)
         self._tracer_radar(pv)
@@ -798,6 +804,9 @@ class Application(ctk.CTk):
             text=f"Ce Pokémon aurait environ {pv} PV.")
         self._phrase_erreur_moyenne.configure(
             text=f"Erreur moyenne du modèle : ± {erreur_moyenne} PV")
+        self._phrase_r2.configure(
+            text=f"Score R² du modèle : {apparence.formater_r2(metrique['r2'])}"
+                 " (1 = parfait, 0 = pas mieux que la moyenne)")
         self._encadre_resultat.pack(fill="x", padx=20, pady=(16, 20))
 
     def _reinitialiser(self) -> None:

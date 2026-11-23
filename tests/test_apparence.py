@@ -6,7 +6,7 @@ import pytest
 
 from interface.apparence import (COULEUR_MENU_TYPE, COULEURS_TYPES, NOMS_TYPES_FR,
                        chemin_image_type, couleur_pour_valeur, couleur_type,
-                       formater_cellule, nom_type_fr)
+                       formater_cellule, formater_r2, nom_type_fr)
 
 
 # Chaque ligne teste les deux côtés d'un seuil : la couleur doit changer
@@ -77,3 +77,10 @@ def test_types_en_minuscules() -> None:
     assert nom_type_fr("fire") == "Feu"
     assert couleur_type("fire") == "#E62829"
     assert formater_cellule("water") == "Eau"
+
+
+@pytest.mark.parametrize("r2, attendu", [
+    (0.4573, "0,46"), (0.0, "0,00"), (1.0, "1,00"), (-0.0021, "-0,00"),
+])
+def test_formater_r2(r2: float, attendu: str) -> None:
+    assert formater_r2(r2) == attendu

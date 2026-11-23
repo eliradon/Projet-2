@@ -142,3 +142,10 @@ def formater_cellule(texte: str) -> str:
     if nombre.is_integer():
         return str(int(nombre))
     return texte
+
+
+def formater_r2(r2: float) -> str:
+    """Reçoit le score R² du modèle et renvoie le texte à afficher, avec
+    deux décimales et une virgule à la française (0.4573 → « 0,46 »).
+    N'échoue pas."""
+    return f"{r2:.2f}".replace(".", ",")

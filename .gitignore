@@ -1,0 +1,15 @@
+# Fichiers générés par l'application : ils se recréent tout seuls au lancement.
+modeles/
+historique.csv
+
+# Fichiers générés par Python et par les outils de test.
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Fichier système de macOS.
+.DS_Store
+
+# Réglages personnels de VS Code.
+.vscode/

@@ -2,16 +2,15 @@
  
 | Choix | Options envisagées | Choix retenu et justification | Validé par l'auxiliaire (date) |
 |---|---|---|---|
-| Domaine | à compléter | Pokémon (loisirs / jeux vidéo) | 22/10/2026 |
+| Domaine | Taux de réussite étudiants, Pokémon, Immobilier | Pokémon (loisirs / jeux vidéo) | 22/10/2026 |
 | Jeu de données | « Pokemon with stats » (abcsds, 800 lignes, sans information d'évolution) ; « The Complete Pokédex Dataset » (1025 lignes, colonnes `evochain_*`) | The Complete Pokédex Dataset : il contient la chaîne d'évolution, utile pour construire des variables de stade. Source et licence à vérifier pour le README. | 13/11/2026 |
-| Variable cible | à compléter | `hp` (régression) | 13/11/2026 |
+| Variable cible | attack, speed, hp | `hp` (régression) | 13/11/2026 |
 | Modèle | Régression linéaire ; arbre de décision (profondeur choisie par validation croisée) | Régression linéaire. Sur le jeu de test : R² = 0,440 et MAE = 13,22, contre R² = 0,162 et MAE = 15,24 pour l'arbre (profondeur 4). Le R² de validation croisée va dans le même sens (0,457 contre 0,334). | 13/11/2026 |
 | Métrique | R², MAE, RMSE | **R²** : donne un repère, car prédire toujours la moyenne donne R² = 0. **MAE** : elle s'exprime dans l'unité de la cible (points de HP). RMSE écartée : elle pénalise fortement les gros écarts, fréquents avec les Pokémon spéciaux. | 13/11/2026 |
 | Séparation des données | Évaluer sur tout le jeu par validation croisée ; garder un jeu de test | Séparation 80 % / 20 % avec graine fixée (`random_state=2`). Le score officiel est calculé une seule fois sur le test. La validation croisée à 5 plis, sur le train seulement, sert à mesurer la stabilité. Le modèle final de l'application est entraîné sur toutes les données. | X |
-| Référence (baseline) | à compléter | `DummyRegressor` (moyenne) : R² = -0,002 et MAE = 19,45 sur le test. Le modèle linéaire réduit l'erreur d'environ 32 %. | 13/11/2026 |
-| Colonnes d'entrée | à compléter | `attack`, `speed`, `defense`, `sp_attack`, `sp_defense`, `weight_kg`, `height_m`, `is_sublegendary`, `is_legendary`, `is_mythical`, les types, `evostage` et `is_final_stage` | 13/11/2026|
-| Encodage des types | à compléter | Une colonne 0/1 par type, en additionnant type principal et type secondaire (un Pokémon à un seul type a un seul 1) | X |
-| Stade d'évolution (`evostage`) | à compléter | Position du nom du Pokémon dans les colonnes `evochain_0, 2, 4, 6`. Cas particulier des évolutions d'Évoli. Sans correspondance : stade 1. | X |
+| Référence (baseline) | DummyRegressor | `DummyRegressor` (moyenne) : R² = -0,002 et MAE = 19,45 sur le test. Le modèle linéaire réduit l'erreur d'environ 32 %. | 13/11/2026 |
+| Colonnes d'entrée | `attack`, `speed`, `defense`, `sp_attack`, `sp_defense`, `weight_kg`, `height_m`, `is_sublegendary`, `is_legendary`, `is_mythical`, les types, `evostage` et `is_final_stage` | `attack`, `speed`, `defense`, `sp_attack`, `sp_defense`, `weight_kg`, `height_m`, `is_sublegendary`, `is_legendary`, `is_mythical`, les types, `evostage` et `is_final_stage` | 13/11/2026|
+| Encodage des types | one hot encoding pour les types | Une colonne 0/1 par type, en additionnant type principal et type secondaire (un Pokémon à un seul type a un seul 1) | X |
+| Stade d'évolution (`evostage`) |  Position du nom du Pokémon dans les colonnes `evochain_0, 2, 4, 6`. Cas particulier des évolutions d'Évoli. Sans correspondance : stade 1. | Position du nom du Pokémon dans les colonnes `evochain_0, 2, 4, 6`. Cas particulier des évolutions d'Évoli. Sans correspondance : stade 1. | X |
 | Forme finale (`is_final_stage`) | Comparer la longueur de la chaîne ; regarder si le nom apparaît dans la chaîne d'un autre Pokémon ; regarder la case suivante | Vrai si le nom est trouvé et que la case suivante de la chaîne est vide. Évoli lui-même est faux, ses évolutions sont vraies (chaîne de base `eevee`). Les anomalies (nom introuvable) sont mises à Faux. | X |
-| Nettoyage | à compléter | Suppression des lignes entièrement vides (`dropna(how="all")`) ; normalisation des noms (espaces et majuscules) avant comparaison | X |
-| Tests | à compléter | 23 tests pytest sur `nettoyer_texte`, `trouver_stade` et `is_final_stage` (cas usuels, limites, Évoli, anomalie) | X |
+| Nettoyage | Suppression des lignes entièrement vides (`dropna(how="all")`) ; normalisation des noms (espaces et majuscules) avant comparaison suppression des colonnes inutiles par exemple `english_name` | Suppression des lignes entièrement vides (`dropna(how="all")`) ; normalisation des noms (espaces et majuscules) avant comparaison suppression des colonnes inutiles par exemple `english_name` | X |

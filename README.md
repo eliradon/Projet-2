@@ -54,7 +54,7 @@ Projet-2/
 │   ├── UI.py            la fenêtre et ses widgets (CustomTkinter)
 │   └── apparence.py     couleurs et mise en forme des textes
 ├── tests/               tests pytest de la logique
-├── docs/                plan de l'interface et maquettes
+├── docs/                plan de l'interface, maquettes, diagramme de classes
 ├── modeles/             modèle et métadonnées (générés au premier lancement)
 └── historique.csv       prédictions enregistrées (généré)
 ```

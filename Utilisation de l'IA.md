@@ -1,13 +1,29 @@
-Utilisation de l'IA.
-
-Partie 1:
-  -On a utiliser l'IA pour nous aider a trouver un sujet interressant: pokémon
-
-
-Partie 2:
-
-
-
-Partie 3:
-
+JOURNAL IA
+ · MD
+# Journal d'utilisation de l'IA : Projet 2 INF1007 (A2026) (Ludovic)
+ 
+**Outil déclaré :** Claude (Anthropic), dans une seule conversation, du 12 au 27 novembre 2026.
+ 
+**Principe suivi :** l'IA nous a servi de guide et de relecteur. Les décisions (cible, jeu de données, métrique, modèle) sont les nôtres. Nous avons exécuté le code et regardé les sorties réelles avant de garder une réponse. Nous restons responsables de chaque ligne remise.
+ 
+## Entrées
+ 
+| # | Outil | Ce que nous avons demandé | Réponse reçue | Vérification faite | Décision |
+|---|---|---|---|---|---|
+| 1 (12 nov.) | Claude | R² et MAE sont-ils de bonnes métriques pour prédire HP, et comment les justifier ? | Oui : la MAE s'exprime en points de HP, le R² donne un repère (prédire la moyenne donne 0). Il faut aussi une référence et un score sur le jeu de test. | Comparé aux étapes 2 à 5 de l'énoncé. La justification de `DECISIONS.md` est reformulée dans nos mots. | **Gardé et modifié** : ajout de la référence et du score sur le test. RMSE écartée. |
+| 2 (12 nov.) | Claude | Pourquoi faire la validation croisée sur le train seulement, alors que nous voulons le plus grand échantillon possible ? Ne vaudrait-il pas mieux garder seulement 5 données pour comparer ? | Première réponse trop catégorique. Après notre objection : score officiel sur un test de 20 %, validation croisée sur le train pour la stabilité, modèle final entraîné sur toutes les données. Cinq exemples du test servent seulement à la démo, car un score sur 5 points est instable. Claude a modifié directement ce bloc de `predicteur.py`. | Relu l'étape 3 de l'énoncé (ne jamais évaluer sur les données d'entraînement). Exécuté : validation croisée R² 0,457 et MAE 13,18 ; test R² 0,440 et MAE 13,22, donc cohérents. | **Gardé** le découpage 80 / 20 et le modèle final sur 100 % des données. **Rejeté** notre idée de départ (évaluer sur 5 données). |
+| 3 (12 nov.) | Claude | Un cours rapide sur `DummyRegressor` : à quoi sert-il et comment l'utiliser ? | Explication et court extrait de code (`strategy="mean"`, `fit`, `predict`, mêmes métriques que le modèle). | Exécuté : R² de la référence −0,002 (proche de 0, comme annoncé) et MAE 19,45. Le modèle linéaire réduit l'erreur d'environ 32 %. | **Gardé** (extrait repris tel quel). |
+| 4 (13 nov.) | Claude | Existe-t-il un jeu de données avec l'information d'évolution des Pokémon ? | Recherche web : plusieurs jeux Kaggle et PokéAPI. Claude a avancé (sans preuve) que les 800 lignes de l'ancien fichier venaient des formes Méga, et a annoncé 898 Pokémon pour le jeu à colonnes `evochain_*`. Il n'a pas pu lire les licences. | Ouvert l'aperçu du jeu choisi : les colonnes `evochain_*` existent, mais l'aperçu affiche 1025 noms uniques, pas 898. Le nombre de lignes du README viendra de `len(data)`. | **Modifié** : nous avons changé de jeu de données. Chiffre de l'IA **rejeté**. |
+| 5 (13 nov.) | Claude | Comment transformer les colonnes `evochain_*` en une colonne de stade, et quels problèmes surveiller dans notre code de nettoyage ? | Principe (position du nom dans la chaîne), squelette avec `apply(axis=1)`, puis correctifs : `dropna(how="all")` pour la ligne vide, `.dropna()` avant `unique()`, `.copy()`, `to_csv(index=False)`. Plus tard, Claude a signalé que notre `elif nom == "eevee"` ne se déclenchait jamais. | Écrit nos propres fonctions `nettoyer_texte` et `trouver_stade`. Exécuté : 18 types sans `NaN`, `X.head()` correct. Relu le cas Évoli et appliqué la correction. Conversion `.astype(int)` des booléens non reprise : le script s'exécute sans. | **Modifié** : squelette adapté, bogue d'Évoli corrigé. Sans correspondance, le stade vaut 1. |
+| 6 (13 nov.) | Claude | Écrire une fonction `is_final_stage`. | Première version fondée sur la longueur de la chaîne. Après notre capture d'écran d'Évoli, Claude l'a abandonnée et a proposé de chercher si le nom apparaît dans la chaîne d'un autre Pokémon. Nous avons proposé notre règle (nom trouvé et case suivante vide, Évoli traité à part). | Deux captures de données réelles. La seconde montre que chaque chaîne contient toute la famille (Bulbasaur, Ivysaur, Venusaur sur les trois lignes), ce qui contredisait la lecture de Claude. | **Rejeté** les deux propositions de Claude. **Gardé** notre règle, écrite par Claude d'après notre description. |
+| 7 (13 nov.) | Claude | Écrire des tests pour ces fonctions avec les données des captures. | Fichier `test_donnees.py` complet (cas usuels, limites, Évoli, anomalie). | Exécuté : `pytest` donne 23 tests réussis (Claude en avait annoncé 21). Limites : lignes de test construites à la main, pas lues dans le CSV ; Yanma, Ditto et Eevee sont déduits. | **Gardé avec réserves** (voir la section « À compléter »). |
+| 8 (13 nov.) | Claude | Un code qui évalue les mêmes colonnes avec un arbre de décision, pour comparer. | Bloc complet : profondeur choisie par validation croisée sur le train, score unique sur le test. Il est marqué « Partie entièrement générée par Claude » dans `predicteur.py`. | Exécuté : profondeur retenue 4, R² du test 0,162 et MAE 15,24, contre 0,440 et 13,22 pour la régression linéaire. La validation croisée va dans le même sens (0,334 contre 0,457). | **Gardé comme comparaison**, **rejeté comme modèle final**. |
+| 9 (13 nov.) | Claude | Mettre à jour `DECISIONS.md` avec les décisions prises depuis le début (nous avions fourni la cible, la méthode et la métrique). | Claude a rédigé le tableau complet à partir de la conversation. Les validations de l'auxiliaire et plusieurs « options envisagées » sont laissées « à compléter », faute d'information. | Relecture du contenu et des chiffres par rapport à nos sorties. | **Gardé**, à compléter et corriger par nous. |
+| 10 (23 nov.) | Claude | Un mini PowerPoint de présentation. | Fichier de 4 diapositives avec notes d'orateur. | Aucune, car il n'a pas été utilisé. | **Rejeté** : non utilisé dans le projet. |
+| 11 (27 nov.) | Claude | Rédiger ce journal d'utilisation de l'IA (`JOURNAL_IA.md`). | Claude a rédigé ce document en entier, à partir de l'historique de la conversation, en signalant les points qu'il ne pouvait pas vérifier. | Relecture de chaque entrée par nous, à faire avant la remise : corriger tout ce qui ne correspond pas à ce que nous avons vraiment fait. | **Gardé**, sous réserve de notre relecture. |
+ 
+## Qui a écrit quoi
+ 
+- **Écrit par nous :** La pluspart du fichier `predicteur.py`, les fonctions `nettoyer_texte` et `trouver_stade` (à partir d'un squelette), le choix de la cible, du jeu de données, de la métrique et du modèle, et la justification de la métrique. Et le remplissage du squelette de DECISION.md
+- **Écrit par Claude :** le bloc de validation croisée et de score sur le test dans `predicteur.py`, l'extrait de la référence, `is_final_stage` (d'après notre règle), le bloc de l'arbre de décision, `test_donnees.py`, la rédaction du squelette de `DECISIONS.md`, ce journal (`JOURNAL_IA.md`) et le diaporama non utilisé.
 
